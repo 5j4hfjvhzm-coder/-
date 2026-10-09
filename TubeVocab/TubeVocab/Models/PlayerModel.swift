@@ -18,6 +18,8 @@ final class PlayerModel {
     var showKo = true
     /// 영상 화면 위에 이중자막 겹쳐 보이기
     var showOnVideo = true
+    /// 앱 자체 전체화면 (가로, 이중자막 유지)
+    private(set) var isFullscreen = false
     /// 다른 탭에서 미니 플레이어를 닫았는지
     var miniHidden = false
 
@@ -80,6 +82,12 @@ final class PlayerModel {
     func pause() {
         js("player && player.pauseVideo && player.pauseVideo()")
         isPlaying = false
+    }
+
+    func setFullscreen(_ on: Bool) {
+        guard on != isFullscreen else { return }
+        isFullscreen = on
+        ScreenOrientation.set(landscape: on)
     }
 
     func togglePlay() {

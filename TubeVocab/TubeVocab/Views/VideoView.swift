@@ -100,6 +100,14 @@ struct VideoView: View {
             .toggleStyle(.button)
             .accessibilityLabel("영상 위 자막")
             Button {
+                player.setFullscreen(true)
+            } label: {
+                Image(systemName: "arrow.up.left.and.arrow.down.right")
+            }
+            .buttonStyle(.bordered)
+            .disabled(player.videoId == nil)
+            .accessibilityLabel("전체화면")
+            Button {
                 showImporter = true
             } label: {
                 Label("자막 파일", systemImage: "doc.text")

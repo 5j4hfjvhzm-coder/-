@@ -27,10 +27,14 @@ struct RootView: View {
         .overlayPreferenceValue(PlayerSlotKey.self) { anchor in
             GeometryReader { proxy in
                 if app.player.videoId != nil {
-                    PlayerOverlay(slot: anchor.map { proxy[$0] }, container: proxy.size)
+                    PlayerOverlay(slot: anchor.map { proxy[$0] }, container: proxy.size, safeArea: proxy.safeAreaInsets)
                 }
             }
+            // 전체화면이 화면 끝까지 덮을 수 있게. 다른 위치는 safeArea 로 직접 계산
+            .ignoresSafeArea()
         }
+        .statusBarHidden(app.player.isFullscreen)
+        .persistentSystemOverlays(app.player.isFullscreen ? .hidden : .automatic)
     }
 
     /// 탭을 바꿔도 화면을 없애지 않는다 (상태·스크롤 유지)
@@ -78,6 +82,7 @@ struct PlayerOverlay: View {
     @Environment(AppModel.self) private var app
     let slot: CGRect?
     let container: CGSize
+    let safeArea: EdgeInsets
 
     private let miniW: CGFloat = 208
     private let miniH: CGFloat = 117
@@ -85,13 +90,10 @@ struct PlayerOverlay: View {
 
     var body: some View {
         let player = app.player
-        let full = app.tab == .video
+        let fullscreen = player.isFullscreen
+        let full = fullscreen || app.tab == .video
         let hidden = !full && player.miniHidden
-        let rect = full
-            ? (slot ?? .zero)
-            : CGRect(x: container.width - miniW - 10,
-                     y: container.height - TabBar.height - 12 - miniH - barH,
-                     width: miniW, height: miniH + barH)
+        let rect = frameRect(fullscreen: fullscreen, full: full)
 
         VStack(spacing: 0) {
             if !full {
@@ -100,8 +102,24 @@ struct PlayerOverlay: View {
             }
             PlayerWebView(webView: player.webView)
                 .overlay(alignment: .bottom) {
-                    if full && player.showOnVideo {
-                        VideoSubtitleOverlay()
+                    if fullscreen || (full && player.showOnVideo) {
+                        VideoSubtitleOverlay(large: fullscreen, safeArea: fullscreen ? safeArea : EdgeInsets())
+                    }
+                }
+                .overlay(alignment: .topLeading) {
+                    if fullscreen {
+                        Button {
+                            player.setFullscreen(false)
+                        } label: {
+                            Image(systemName: "arrow.down.right.and.arrow.up.left")
+                                .font(.system(size: 17, weight: .semibold))
+                                .foregroundStyle(.white)
+                                .padding(10)
+                                .background(Color.black.opacity(0.55), in: Circle())
+                        }
+                        .accessibilityLabel("전체화면 끝내기")
+                        .padding(.leading, safeArea.leading + 12)
+                        .padding(.top, safeArea.top + 12)
                     }
                 }
         }
@@ -113,12 +131,25 @@ struct PlayerOverlay: View {
         .opacity(hidden ? 0 : 1)
         .allowsHitTesting(!hidden)
         .animation(.easeInOut(duration: 0.22), value: full)
+        .animation(.easeInOut(duration: 0.22), value: fullscreen)
+    }
+
+    /// 전체화면 → 화면 전체, 영상 탭 → VideoView 의 플레이어 자리, 다른 탭 → 오른쪽 아래 미니
+    private func frameRect(fullscreen: Bool, full: Bool) -> CGRect {
+        if fullscreen { return CGRect(origin: .zero, size: container) }
+        if full { return slot ?? .zero }
+        return CGRect(x: container.width - safeArea.trailing - miniW - 10,
+                      y: container.height - safeArea.bottom - TabBar.height - 12 - miniH - barH,
+                      width: miniW, height: miniH + barH)
     }
 }
 
 /// 영상 화면 안에 겹쳐 보이는 영/한 자막. 영어 단어를 탭하면 사전.
 private struct VideoSubtitleOverlay: View {
     @Environment(AppModel.self) private var app
+    /// 전체화면이면 글자를 크게
+    var large = false
+    var safeArea = EdgeInsets()
 
     var body: some View {
         let player = app.player
@@ -133,12 +164,12 @@ private struct VideoSubtitleOverlay: View {
                         TappableText(text: cue.en, highlight: app.vocab.highlight, textColor: .white) { tap, words in
                             app.openWord(cue: cue, tap: tap, words: words)
                         }
-                        .font(.system(size: 15, weight: .semibold))
+                        .font(.system(size: large ? 22 : 15, weight: .semibold))
                         .lineLimit(3)
                     }
                     if showKo {
                         Text(cue.ko)
-                            .font(.system(size: 13, weight: .medium))
+                            .font(.system(size: large ? 18 : 13, weight: .medium))
                             .foregroundStyle(Color.yellow)
                             .lineLimit(2)
                     }
@@ -149,9 +180,10 @@ private struct VideoSubtitleOverlay: View {
                 .padding(.horizontal, 8)
                 .padding(.vertical, 4)
                 .background(Color.black.opacity(0.6), in: RoundedRectangle(cornerRadius: 6))
-                .padding(.horizontal, 10)
+                .padding(.leading, safeArea.leading + 10)
+                .padding(.trailing, safeArea.trailing + 10)
                 // 유튜브 재생 막대 위로
-                .padding(.bottom, 36)
+                .padding(.bottom, safeArea.bottom + (large ? 48 : 36))
             }
         }
     }
