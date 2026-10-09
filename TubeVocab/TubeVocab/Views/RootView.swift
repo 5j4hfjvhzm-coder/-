@@ -99,6 +99,11 @@ struct PlayerOverlay: View {
                     .frame(height: barH)
             }
             PlayerWebView(webView: player.webView)
+                .overlay(alignment: .bottom) {
+                    if full && player.showOnVideo {
+                        VideoSubtitleOverlay()
+                    }
+                }
         }
         .frame(width: rect.width, height: rect.height)
         .background(Color.black)
@@ -108,6 +113,47 @@ struct PlayerOverlay: View {
         .opacity(hidden ? 0 : 1)
         .allowsHitTesting(!hidden)
         .animation(.easeInOut(duration: 0.22), value: full)
+    }
+}
+
+/// 영상 화면 안에 겹쳐 보이는 영/한 자막. 영어 단어를 탭하면 사전.
+private struct VideoSubtitleOverlay: View {
+    @Environment(AppModel.self) private var app
+
+    var body: some View {
+        let player = app.player
+        let idx = player.currentIndex
+        if idx >= 0 && idx < player.cues.count {
+            let cue = player.cues[idx]
+            let showEn = player.showEn && !cue.en.isEmpty
+            let showKo = player.showKo && !cue.ko.isEmpty
+            if showEn || showKo {
+                VStack(spacing: 2) {
+                    if showEn {
+                        TappableText(text: cue.en, highlight: app.vocab.highlight, textColor: .white) { tap, words in
+                            app.openWord(cue: cue, tap: tap, words: words)
+                        }
+                        .font(.system(size: 15, weight: .semibold))
+                        .lineLimit(3)
+                    }
+                    if showKo {
+                        Text(cue.ko)
+                            .font(.system(size: 13, weight: .medium))
+                            .foregroundStyle(Color.yellow)
+                            .lineLimit(2)
+                    }
+                }
+                .multilineTextAlignment(.center)
+                .minimumScaleFactor(0.75)
+                .shadow(color: .black, radius: 1)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+                .background(Color.black.opacity(0.6), in: RoundedRectangle(cornerRadius: 6))
+                .padding(.horizontal, 10)
+                // 유튜브 재생 막대 위로
+                .padding(.bottom, 36)
+            }
+        }
     }
 }
 

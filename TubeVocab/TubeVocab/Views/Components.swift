@@ -6,13 +6,16 @@ import UIKit
 struct TappableText: View {
     let text: String
     var highlight: HighlightIndex? = nil
+    /// 단어(링크) 글자색. 영상 위 자막처럼 어두운 배경이면 .white
+    var textColor: Color = .primary
     /// (단어 인덱스, 문장의 단어 목록)
     var onTap: ((Int, [String]) -> Void)? = nil
 
     var body: some View {
         let built = Self.build(text, highlight: highlight, tappable: onTap != nil)
         Text(built.attributed)
-            .tint(.primary)
+            .tint(textColor)
+            .foregroundStyle(textColor)
             .environment(\.openURL, OpenURLAction { url in
                 if url.scheme == "tvword", let i = Int(url.host() ?? ""), let onTap {
                     onTap(i, built.words)

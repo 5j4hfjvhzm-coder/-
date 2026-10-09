@@ -16,6 +16,8 @@ final class PlayerModel {
     private(set) var error: String?
     var showEn = true
     var showKo = true
+    /// 영상 화면 위에 이중자막 겹쳐 보이기
+    var showOnVideo = true
     /// 다른 탭에서 미니 플레이어를 닫았는지
     var miniHidden = false
 
@@ -183,7 +185,7 @@ final class PlayerModel {
         function onYouTubeIframeAPIReady() {
           player = new YT.Player('player', {
             width: '100%', height: '100%', videoId: '\(videoId)',
-            playerVars: { playsinline: 1, autoplay: 1, rel: 0, iv_load_policy: 3, cc_load_policy: 0,
+            playerVars: { playsinline: 1, autoplay: 1, rel: 0, iv_load_policy: 3, cc_load_policy: 0, fs: 0,
                           start: \(startSeconds), origin: '\(origin)' },
             events: {
               onReady: function () { post('ready', 0); player.playVideo(); },

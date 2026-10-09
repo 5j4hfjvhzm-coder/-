@@ -18,7 +18,6 @@ struct VideoView: View {
     @Environment(AppModel.self) private var app
     @State private var url = ""
     @State private var urlError = false
-    @State private var wordContext: WordContext?
     @State private var showImporter = false
     @State private var lastUserScroll = Date.distantPast
 
@@ -45,7 +44,7 @@ struct VideoView: View {
             transcript
         }
         .background(Color(.systemGroupedBackground))
-        .sheet(item: $wordContext) { ctx in
+        .sheet(item: Binding(get: { app.wordContext }, set: { app.wordContext = $0 })) { ctx in
             WordSheet(ctx: ctx)
         }
         .fileImporter(isPresented: $showImporter, allowedContentTypes: Self.subtitleTypes) { result in
@@ -95,6 +94,11 @@ struct VideoView: View {
                 .toggleStyle(.button)
             Toggle("한", isOn: Binding(get: { player.showKo }, set: { player.showKo = $0 }))
                 .toggleStyle(.button)
+            Toggle(isOn: Binding(get: { player.showOnVideo }, set: { player.showOnVideo = $0 })) {
+                Image(systemName: "captions.bubble")
+            }
+            .toggleStyle(.button)
+            .accessibilityLabel("영상 위 자막")
             Button {
                 showImporter = true
             } label: {
@@ -126,11 +130,7 @@ struct VideoView: View {
             if let cue {
                 if player.showEn && !cue.en.isEmpty {
                     TappableText(text: cue.en, highlight: app.vocab.highlight) { tap, words in
-                        player.pause()
-                        wordContext = WordContext(
-                            words: words, tap: tap, sentenceEn: cue.en, sentenceKo: cue.ko,
-                            videoId: player.videoId ?? "", timeMs: player.timeMs
-                        )
+                        app.openWord(cue: cue, tap: tap, words: words)
                     }
                     .font(.title3.weight(.semibold))
                 }
