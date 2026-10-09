@@ -139,10 +139,11 @@ func wordsToSentences(_ ws: [TimedWord], options o: SentenceOptions = SentenceOp
         let next: TimedWord? = i + 1 < ws.count ? ws[i + 1] : nil
         cur.append(w)
         let gap = next.map { $0.t - w.t } ?? Int.max
-        if next == nil
-            || w.text.matchesRegex(sentenceEnd)
-            || cur.count >= o.maxWords
-            || (gap >= o.pauseMs && cur.count >= o.minWords) {
+        let isLast = next == nil
+        let endsSentence = w.text.matchesRegex(sentenceEnd)
+        let tooLong = cur.count >= o.maxWords
+        let longPause = gap >= o.pauseMs && cur.count >= o.minWords
+        if isLast || endsSentence || tooLong || longPause {
             flush(next?.t ?? (w.t + 1500))
         }
     }
@@ -235,8 +236,12 @@ private let timePattern =
     "(?:(\\d+):)?(\\d{1,2}):(\\d{2})[.,](\\d{1,3})\\s*-->\\s*(?:(\\d+):)?(\\d{1,2}):(\\d{2})[.,](\\d{1,3})"
 
 private func toMs(_ h: String?, _ m: String, _ s: String, _ ms: String) -> Int {
-    let msPadded = ms.padding(toLength: 3, withPad: "0", startingAt: 0)
-    return ((Int(h ?? "0") ?? 0) * 3600 + (Int(m) ?? 0) * 60 + (Int(s) ?? 0)) * 1000 + (Int(msPadded) ?? 0)
+    let hours: Int = Int(h ?? "0") ?? 0
+    let minutes: Int = Int(m) ?? 0
+    let seconds: Int = Int(s) ?? 0
+    let millis: Int = Int(ms.padding(toLength: 3, withPad: "0", startingAt: 0)) ?? 0
+    let totalSeconds: Int = hours * 3600 + minutes * 60 + seconds
+    return totalSeconds * 1000 + millis
 }
 
 func parseSrtVtt(_ raw: String) -> [Cue] {
@@ -271,8 +276,14 @@ func parseSrtVtt(_ raw: String) -> [Cue] {
     return stableSorted(cues) { $0.start }
 }
 
+private let hangulSyllables: ClosedRange<UInt32> = 0xAC00...0xD7A3
+private let hangulJamo: ClosedRange<UInt32> = 0x3131...0x318E
+
 func containsHangul(_ s: String) -> Bool {
-    s.unicodeScalars.contains { (0xAC00...0xD7A3).contains($0.value) || (0x3131...0x318E).contains($0.value) }
+    s.unicodeScalars.contains { scalar in
+        let v: UInt32 = scalar.value
+        return hangulSyllables.contains(v) || hangulJamo.contains(v)
+    }
 }
 
 /// 한 파일에 영/한이 같이 들어있는 경우까지 처리: 줄마다 한글 여부로 나눈다.
