@@ -1,13 +1,14 @@
 import SwiftUI
 import UIKit
 
-/// 자막 단어를 탭하면 뜨는 사전 시트. 뜻을 골라 "모르는 단어로 저장".
+/// 자막 단어를 탭하면 뜨는 사전 시트. 뜻을 여러 개 골라 한 단어로 "모르는 단어로 저장".
 struct WordSheet: View {
     let ctx: WordContext
     @Environment(AppModel.self) private var app
     @Environment(\.dismiss) private var dismiss
     @State private var result: LookupResult?
-    @State private var selected: DictSelection?
+    /// 고른 순서대로
+    @State private var selected: [DictSelection] = []
     @State private var saved = false
 
     var body: some View {
@@ -25,9 +26,8 @@ struct WordSheet: View {
                     if let err = app.dictError {
                         Text(err).foregroundStyle(.red)
                     } else if let result {
-                        DictionaryView(result: result, selectedKey: selected?.key) { s in
-                            selected = s
-                            saved = false
+                        DictionaryView(result: result, selectedKeys: Set(selected.map(\.key))) { s in
+                            toggle(s)
                         }
                     } else {
                         ProgressView().frame(maxWidth: .infinity).padding(.top, 24)
@@ -37,13 +37,13 @@ struct WordSheet: View {
             }
 
             Button(action: save) {
-                Text(saved ? "저장했어요 ✓" : selected == nil ? "뜻을 하나 골라 주세요" : "모르는 단어로 저장")
+                Text(buttonTitle)
                     .font(.headline)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 6)
             }
             .buttonStyle(.borderedProminent)
-            .disabled(selected == nil || saved)
+            .disabled(selected.isEmpty || saved)
         }
         .padding()
         .presentationDetents([.medium, .large])
@@ -55,13 +55,36 @@ struct WordSheet: View {
         }
     }
 
+    private var buttonTitle: String {
+        if saved { return "저장했어요 ✓" }
+        if selected.isEmpty { return "뜻을 골라 주세요 (여러 개 가능)" }
+        return "뜻 \(selected.count)개로 저장"
+    }
+
+    /// 탭하면 고르고, 다시 탭하면 해제. 숙어 뜻과 단어 뜻은 섞지 않는다 (다른 쪽을 고르면 새로 시작).
+    private func toggle(_ s: DictSelection) {
+        saved = false
+        if let i = selected.firstIndex(where: { $0.key == s.key }) {
+            selected.remove(at: i)
+        } else if let first = selected.first, Self.head(first) != Self.head(s) {
+            selected = [s]
+        } else {
+            selected.append(s)
+        }
+    }
+
+    private static func head(_ s: DictSelection) -> String {
+        s.phraseSurface != nil ? "phrase:\(s.entry.word.lowercased())" : "word"
+    }
+
     private func save() {
-        guard let sel = selected, let store = app.dict else { return }
-        app.vocab.add(Self.makeWord(store: store, ctx: ctx, selection: sel))
+        guard !selected.isEmpty, let store = app.dict else { return }
+        app.vocab.add(Self.makeWord(store: store, ctx: ctx, selections: selected))
         saved = true
     }
 
-    static func makeWord(store: DictStore, ctx: WordContext, selection sel: DictSelection) -> SavedWord {
+    static func makeWord(store: DictStore, ctx: WordContext, selections: [DictSelection]) -> SavedWord {
+        let sel = selections[0]
         let surface = sel.phraseSurface ?? ctx.words[ctx.tap]
         let lemma = sel.entry.word.lowercased()
         var forms: [String]
@@ -74,19 +97,27 @@ struct WordSheet: View {
             forms = store.formsOf(lemma)
         }
         forms = uniqued([normalizeWord(surface)] + forms)
-        let koGloss = sel.entry.source == .ko
-        return SavedWord(
+        var word = SavedWord(
             surface: surface,
             lemma: lemma,
             forms: forms,
             pos: sel.entry.pos,
-            sense: sel.sense.gloss,
-            senseTags: sel.sense.tags,
-            senseKo: koGloss ? sel.sense.gloss : sel.sense.ko.joined(separator: ", "),
+            sense: "",
+            senseTags: [],
+            senseKo: "",
             sentenceEn: ctx.sentenceEn,
             sentenceKo: ctx.sentenceKo,
             videoId: ctx.videoId,
             timeMs: ctx.timeMs
         )
+        word.setMeanings(selections.map { s in
+            Meaning(
+                gloss: s.sense.gloss,
+                ko: s.entry.source == .ko ? s.sense.gloss : s.sense.ko.joined(separator: ", "),
+                tags: s.sense.tags,
+                pos: s.entry.pos
+            )
+        })
+        return word
     }
 }

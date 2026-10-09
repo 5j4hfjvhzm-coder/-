@@ -135,7 +135,7 @@ private struct QuizCard: View {
             // 문장에서 단어를 못 찾으면 뜻으로 묻기
             VStack(alignment: .leading, spacing: 4) {
                 Text("이 뜻의 단어는?").font(.caption).foregroundStyle(.secondary)
-                Text(w.senseKo.isEmpty ? w.sense : w.senseKo)
+                Text(w.summary)
                 if verdict != nil { Text(w.surface).bold() }
             }
         }
@@ -183,7 +183,7 @@ private struct QuizCard: View {
                   systemImage: correct ? "checkmark.circle.fill" : "xmark.circle.fill")
                 .font(.headline)
                 .foregroundStyle(correct ? Color.green : Color.red)
-            Text(w.senseKo.isEmpty ? w.sense : "\(w.senseKo) — \(w.sense)").font(.subheadline)
+            Text(w.summary).font(.subheadline)
             if !w.sentenceKo.isEmpty { Text(w.sentenceKo).font(.subheadline).foregroundStyle(.secondary) }
             if !session.practice {
                 Text(correct ? "다음 복습: \(nextIntervalText(w))" : "10분 뒤에 다시 나와요")

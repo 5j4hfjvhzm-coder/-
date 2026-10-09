@@ -41,7 +41,7 @@ struct WordsView: View {
         let q = query.trimmingCharacters(in: .whitespaces).lowercased()
         guard !q.isEmpty else { return app.vocab.words }
         return app.vocab.words.filter { w in
-            [w.surface, w.lemma, w.sense, w.senseKo, w.sentenceEn, w.sentenceKo].contains { $0.lowercased().contains(q) }
+            [w.surface, w.lemma, w.sense, w.summary, w.sentenceEn, w.sentenceKo].contains { $0.lowercased().contains(q) }
         }
     }
 
@@ -81,7 +81,7 @@ private struct WordRow: View {
                 Text(describeDue(word.dueAt, now: nowMs()))
                     .font(.caption2).foregroundStyle(.secondary)
             }
-            Text(word.senseKo.isEmpty ? word.sense : word.senseKo)
+            Text(word.summary)
                 .font(.subheadline).lineLimit(1)
             Text(word.sentenceEn)
                 .font(.caption).foregroundStyle(.secondary).lineLimit(1)
@@ -109,13 +109,22 @@ struct WordDetailView: View {
                         if w.lemma != w.surface.lowercased() {
                             Text("기본형: \(w.lemma)").font(.subheadline).foregroundStyle(.secondary)
                         }
-                        TagBadges(tags: w.senseTags)
-                        Text(w.sense)
-                        if !w.senseKo.isEmpty && w.senseKo != w.sense {
-                            Text(w.senseKo).foregroundStyle(.blue)
-                        }
                     }
                     .padding(.vertical, 4)
+                }
+                Section("고른 뜻 \(w.allMeanings.count)개") {
+                    ForEach(Array(w.allMeanings.enumerated()), id: \.offset) { i, m in
+                        HStack(alignment: .top, spacing: 8) {
+                            Text("\(i + 1)").font(.subheadline.bold()).foregroundStyle(.secondary)
+                            VStack(alignment: .leading, spacing: 3) {
+                                TagBadges(tags: m.tags)
+                                Text(m.gloss)
+                                if !m.ko.isEmpty && m.ko != m.gloss {
+                                    Text(m.ko).foregroundStyle(.blue)
+                                }
+                            }
+                        }
+                    }
                 }
                 Section("원문 문장") {
                     TappableText(text: w.sentenceEn, highlight: buildHighlightIndex([w.target]))

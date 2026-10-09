@@ -9,10 +9,11 @@ struct DictSelection: Equatable {
     var phraseSurface: String?
 }
 
-/// 사전 조회 결과 목록. onSelect 가 있으면 뜻을 탭해서 고를 수 있다.
+/// 사전 조회 결과 목록. onSelect 가 있으면 뜻을 탭해서 고르고, 다시 탭하면 해제한다.
 struct DictionaryView: View {
     let result: LookupResult
-    var selectedKey: String? = nil
+    /// 고른 뜻들 (여러 개)
+    var selectedKeys: Set<String> = []
     var onSelect: ((DictSelection) -> Void)? = nil
 
     var body: some View {
@@ -44,14 +45,14 @@ struct DictionaryView: View {
                         }
                     }
                     ForEach(p.entries) { e in
-                        EntryCard(entry: e, selectedKey: selectedKey, onSelect: handler(phraseSurface: p.surface))
+                        EntryCard(entry: e, selectedKeys: selectedKeys, onSelect: handler(phraseSurface: p.surface))
                     }
                 }
                 if !result.entries.isEmpty { SectionTitle("단어") }
             }
 
             ForEach(result.entries) { e in
-                EntryCard(entry: e, selectedKey: selectedKey, onSelect: handler(phraseSurface: nil))
+                EntryCard(entry: e, selectedKeys: selectedKeys, onSelect: handler(phraseSurface: nil))
             }
         }
     }
@@ -80,7 +81,7 @@ private struct SectionTitle: View {
 
 private struct EntryCard: View {
     let entry: Entry
-    let selectedKey: String?
+    let selectedKeys: Set<String>
     let onSelect: ((Entry, Sense, String) -> Void)?
 
     var body: some View {
@@ -98,7 +99,7 @@ private struct EntryCard: View {
             }
             ForEach(Array(entry.senses.enumerated()), id: \.element.id) { i, s in
                 let key = "\(entry.source.rawValue):\(entry.id):\(s.id)"
-                let selected = key == selectedKey
+                let selected = selectedKeys.contains(key)
                 Button {
                     onSelect?(entry, s, key)
                 } label: {
