@@ -190,6 +190,10 @@ struct DictSearchView: View {
                 } else if let result, !query.trimmingCharacters(in: .whitespaces).isEmpty {
                     DictionaryView(result: result).padding()
                 }
+                Text(dictionaryCredits)
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                    .padding()
             }
         }
         .background(Color(.systemGroupedBackground))
@@ -203,3 +207,10 @@ struct DictSearchView: View {
         }
     }
 }
+
+/// 내장 사전 출처 (CC BY-SA 4.0 저작자 표시)
+let dictionaryCredits = """
+사전 출처: WordNet 3.0 (Princeton University) · open-english-korean-dict \
+(jhseo1211, CC BY-SA 4.0) · kengdic (Joe Speigle, MPL 2.0). \
+내장 사전 파일(dict.db)은 CC BY-SA 4.0 으로 배포됩니다.
+"""

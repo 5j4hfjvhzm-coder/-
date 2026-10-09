@@ -1,8 +1,8 @@
 import XCTest
 @testable import TubeVocab
 
-/// 앱에 들어있는 dict.db(scripts/build_dict.py 로 만든 샘플)로 SQLite 저장소 + 문맥 조회를 끝까지 확인.
-/// 전체 덤프로 dict.db 를 다시 만들어도 통과해야 하는 내용만 확인한다.
+/// 앱에 들어 있는 dict.db(WordNet + open-english-korean-dict + kengdic 으로 만든 것)로
+/// SQLite 저장소 + 문맥 조회를 끝까지 확인.
 final class SQLDictStoreTests: XCTestCase {
     var store: SQLDictStore!
 
@@ -12,13 +12,22 @@ final class SQLDictStoreTests: XCTestCase {
 
     func testWentToGoWithKorean() {
         let r = Fixtures.look(store, "We went to the park", "went")
+        XCTAssertTrue(r.lemmas.contains("go"))
         XCTAssertEqual(r.entries.first?.word, "go")
-        XCTAssertTrue(r.entries.contains { $0.source == .ko && $0.senses.contains { $0.gloss.contains("가다") } })
+        XCTAssertTrue(r.entries.contains { $0.source == .ko && $0.senses.contains { $0.gloss == "가다" } })
+        XCTAssertTrue(r.entries.contains { $0.source == .en && $0.word == "go" })
+    }
+
+    func testGaveUpPhraseWithKorean() {
+        let r = Fixtures.look(store, "She gave up.", "gave")
+        let giveUp = r.phrases.first { $0.match.phrase == "give up" }
+        XCTAssertNotNil(giveUp)
+        XCTAssertTrue(giveUp?.entries.contains { $0.source == .ko && $0.senses.contains { $0.gloss == "포기하다" } } ?? false)
     }
 
     func testPickItUp() {
         let r = Fixtures.look(store, "You can pick it up later", "up")
-        XCTAssertEqual(r.phrases.first?.match.phrase, "pick up")
+        XCTAssertTrue(r.phrases.map(\.match.phrase).contains("pick up"))
     }
 
     func testMadeUpMyMind() {
@@ -27,14 +36,18 @@ final class SQLDictStoreTests: XCTestCase {
         XCTAssertEqual(r.phrases.first?.surface, "made up my mind")
     }
 
-    func testSlangSense() {
-        let r = Fixtures.look(store, "That was sick", "sick")
-        let en = r.entries.first { $0.source == .en }
-        XCTAssertNotNil(en?.senses.first { $0.tags.contains("slang") })
+    func testPosFromPreviousWord() {
+        XCTAssertEqual(Fixtures.look(store, "I read a book", "book").entries.first?.pos, "noun")
+        XCTAssertEqual(Fixtures.look(store, "I need to book a room", "book").entries.first?.pos, "verb")
+    }
+
+    func testNewWordFromKoreanDictionary() {
+        let r = Fixtures.look(store, "That guy is sus", "sus")
+        XCTAssertTrue(r.entries.contains { $0.senses.contains { $0.gloss == "의심스러운" } })
     }
 
     func testFormsAndPrefix() {
-        XCTAssertTrue(Set(store.formsOf("give")).isSuperset(of: ["gave", "given"]))
-        XCTAssertTrue(store.searchPrefix("giv", limit: 5).contains("give up"))
+        XCTAssertTrue(Set(store.formsOf("give")).isSuperset(of: ["gave", "given", "gives", "giving"]))
+        XCTAssertTrue(store.searchPrefix("give u", limit: 5).contains("give up"))
     }
 }

@@ -106,5 +106,106 @@ class BuildDictTest(unittest.TestCase):
             self.assertIn(f'"{tag}":', swift, tag)
 
 
+class FreeSourcesTest(unittest.TestCase):
+    """WordNet + open-english-korean-dict + kengdic (실제 파일과 같은 형식의 작은 예시)"""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.tmp = tempfile.mkdtemp()
+        wn = os.path.join(cls.tmp, "wordnet")
+        os.makedirs(wn)
+        files = {
+            "data.noun": [
+                "  1 This software and database is being provided to you, the LICENSEE ...",
+                "00000001 04 n 01 slang 0 000 | informal language",
+                '00000002 21 n 01 dough 0 001 ;u 00000001 n 0000 | informal terms for money; "he made a lot of dough"',
+                "00000003 15 n 01 Paris 0 000 | the capital of France",
+            ],
+            "index.noun": ["  1 license header", "slang n 1 0 1 0 00000001", "dough n 1 1 ;u 1 0 00000002",
+                           "paris n 1 0 1 0 00000003"],
+            "data.verb": [
+                '00000010 40 v 02 give_up 0 quit 0 000 01 + 08 00 | stop maintaining or insisting on; "He gave up smoking"',
+                "00000011 40 v 01 give 0 000 | transfer possession of something",
+                "00000012 38 v 01 stop 0 000 | come to a halt",
+            ],
+            "index.verb": ["give_up v 1 0 1 0 00000010", "give v 1 0 1 0 00000011", "stop v 1 0 1 0 00000012"],
+            "verb.exc": ["gave give", "given give"],
+            "data.adj": [], "index.adj": [], "data.adv": [], "index.adv": [],
+        }
+        for name, lines in files.items():
+            with open(os.path.join(wn, name), "w", encoding="utf-8") as f:
+                f.write("\n".join(lines) + ("\n" if lines else ""))
+
+        oekd = os.path.join(cls.tmp, "oekd.sqlite")
+        db = sqlite3.connect(oekd)
+        db.execute("CREATE TABLE words (word TEXT PRIMARY KEY, meaning_ko TEXT NOT NULL, meaning_ja TEXT, meaning_zh TEXT,"
+                   " meaning_en TEXT, meaning_secondary TEXT, ipa TEXT, pos TEXT, cefr TEXT, freq_rank INTEGER)")
+        db.executemany("INSERT INTO words(word, meaning_ko, meaning_secondary, ipa) VALUES (?,?,?,?)", [
+            ("give", "주다", None, "/ɡɪv/"), ("sus", "의심스러운", None, None), ("dough", "반죽", "돈", None),
+        ])
+        db.commit()
+        db.close()
+
+        keng = os.path.join(cls.tmp, "kengdic.tsv")
+        with open(keng, "w", encoding="utf-8") as f:
+            f.write("id\tsurface\thanja\tgloss\tlevel\tcreated\tsource\n")
+            f.write("1\t포기하다\t\tto give up; abandon\t\t\tx\n")
+            f.write("2\t건네다\t\tto give (something)\t\t\tx\n")
+            f.write("3\t주다\t\tgive\t\t\tx\n")
+
+        cls.out = os.path.join(cls.tmp, "dict.db")
+        args = build_dict.parse_args(["--wordnet", wn, "--oekd", oekd, "--kengdic", keng, "--out", cls.out])
+        build_dict.build(args)
+        cls.db = sqlite3.connect(cls.out)
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.db.close()
+        shutil.rmtree(cls.tmp)
+
+    def q(self, sql, *params):
+        return self.db.execute(sql, params).fetchall()
+
+    def senses(self, word, source):
+        return self.q("SELECT e.pos, s.gloss, s.tags, s.examples FROM senses s JOIN entries e ON e.id=s.entry_id "
+                      "WHERE e.word_lower=? AND e.source=? ORDER BY e.id, s.idx", word, source)
+
+    def test_wordnet_gloss_examples_and_usage_tag(self):
+        rows = self.senses("dough", "en")
+        self.assertEqual(rows[0][:3], ("noun", "informal terms for money", "slang"))
+        self.assertEqual(json.loads(rows[0][3]), [{"text": "he made a lot of dough"}])
+
+    def test_wordnet_phrasal_verb(self):
+        rows = self.senses("give up", "en")
+        self.assertEqual(rows[0][1], "stop maintaining or insisting on")
+        self.assertIn("phrasal-verb", rows[0][2].split())
+        self.assertIn(("give", "give up"), self.q("SELECT * FROM phrases"))
+
+    def test_proper_nouns_skipped(self):
+        self.assertEqual(self.senses("paris", "en"), [])
+
+    def test_irregular_and_regular_forms(self):
+        give = {r[0] for r in self.q("SELECT form FROM forms WHERE lemma='give'")}
+        self.assertEqual(give, {"gave", "given", "gives", "giving"})  # gived 는 없어야 함
+        stop = {r[0] for r in self.q("SELECT form FROM forms WHERE lemma='stop'")}
+        self.assertEqual(stop, {"stops", "stopped", "stopping"})
+
+    def test_korean_meanings_merged_and_grouped_by_pos(self):
+        # 대표 뜻(open-english-korean-dict) 먼저, kengdic 으로 보강, 품사는 영영 품사에 맞춤
+        self.assertEqual([r[:2] for r in self.senses("give", "ko")], [("verb", "주다"), ("verb", "건네다")])
+        self.assertEqual([r[:2] for r in self.senses("give up", "ko")], [("verb", "포기하다")])
+        self.assertEqual([r[:2] for r in self.senses("dough", "ko")], [("noun", "반죽"), ("noun", "돈")])
+
+    def test_word_only_in_korean_dictionary(self):
+        self.assertEqual([r[:2] for r in self.senses("sus", "ko")], [("adj", "의심스러운")])
+        self.assertEqual(self.q("SELECT ipa FROM entries WHERE word_lower='give' AND source='ko'"), [("/ɡɪv/",)])
+
+    def test_korean_pos_guess(self):
+        self.assertEqual(build_dict.korean_pos("포기하다"), "verb")
+        self.assertEqual(build_dict.korean_pos("의심스러운"), "adj")
+        self.assertEqual(build_dict.korean_pos("천천히"), "adv")
+        self.assertEqual(build_dict.korean_pos("책"), "noun")
+
+
 if __name__ == "__main__":
     unittest.main()

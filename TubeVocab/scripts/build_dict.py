@@ -1,6 +1,13 @@
 #!/usr/bin/env python3
 """
-kaikki.org 위키낱말사전 덤프(wiktextract JSONL) → 앱 내장용 SQLite 사전(dict.db)
+사전 소스 → 앱 내장용 SQLite 사전(dict.db)
+
+무료 소스 (기본, scripts/make_free_dict.sh 가 받아서 실행):
+  --wordnet  WordNet 3.0 dict 폴더           영어 뜻·예문·불규칙 활용·구동사·용법 태그
+  --oekd     open-english-korean-dict sqlite  한국어 대표 뜻·발음
+  --kengdic  kengdic.tsv                      한국어 뜻 보강·숙어
+
+kaikki.org 위키낱말사전 덤프(wiktextract JSONL, 선택):
 
   영어판:   https://kaikki.org/dictionary/raw-wiktextract-data.jsonl.gz
   한국어판: https://kaikki.org/kowiktionary/raw-wiktextract-data.jsonl.gz
@@ -26,6 +33,7 @@ import gzip
 import io
 import json
 import os
+import re
 import sqlite3
 import sys
 import time
@@ -64,6 +72,8 @@ SKIP_FORM_TAGS = {
 
 # TubeVocab/Core/Phrase.swift 와 같은 자리표시자
 PLACEHOLDERS = {"someone", "somebody", "something", "sb", "sth", "one", "one's", "someone's", "somebody's", "oneself"}
+
+PHRASAL_PARTICLES = {"up", "down", "out", "off", "in", "on", "away", "back", "over", "through", "around", "about"}
 
 DEFAULT_SKIP_POS = {"name", "character", "symbol", "romanization", "punct"}
 
@@ -299,25 +309,31 @@ class Builder:
                 break
         if not senses:
             return
-        if " " in wl and pos == "verb" and wl.split()[-1] in {"up", "down", "out", "off", "in", "on", "away", "back", "over", "through", "around", "about"}:
-            for s in senses:
-                if "phrasal-verb" not in s["tags"]:
-                    s["tags"].append("phrasal-verb")
-
         leftover = attach_translations(senses, ko_translations(obj.get("translations", [])))
         ipa = next((snd["ipa"] for snd in obj.get("sounds", []) or [] if snd.get("ipa")), None)
+        self.insert_entry(word, pos, source, senses, ipa=ipa, ko=leftover)
 
+    def insert_entry(self, word: str, pos: str, source: str, senses: list[dict], ipa: str | None = None,
+                     ko: list[str] | None = None):
+        """senses: [{gloss, tags, examples, ko}]"""
+        wl = norm(word)
+        if not senses or not wl:
+            return
+        if " " in wl and pos == "verb" and wl.split()[-1] in PHRASAL_PARTICLES:
+            for sn in senses:
+                if "phrasal-verb" not in sn["tags"]:
+                    sn["tags"].append("phrasal-verb")
         cur = self.db.execute(
             "INSERT INTO entries(word, word_lower, pos, source, ipa, ko) VALUES (?,?,?,?,?,?)",
-            (word, wl, pos, source, ipa, json.dumps(leftover, ensure_ascii=False) if leftover else None),
+            (word, wl, pos, source, ipa, json.dumps(ko, ensure_ascii=False) if ko else None),
         )
         eid = cur.lastrowid
         self.db.executemany(
             "INSERT INTO senses(entry_id, idx, gloss, tags, examples, ko) VALUES (?,?,?,?,?,?)",
             [
-                (eid, i, s["gloss"], " ".join(s["tags"]), json.dumps(s["examples"], ensure_ascii=False),
-                 json.dumps(s["ko"], ensure_ascii=False))
-                for i, s in enumerate(senses)
+                (eid, i, sn["gloss"], " ".join(sn["tags"]), json.dumps(sn.get("examples", []), ensure_ascii=False),
+                 json.dumps(sn.get("ko", []), ensure_ascii=False))
+                for i, sn in enumerate(senses)
             ],
         )
         self.stats["entries"] += 1
@@ -344,6 +360,253 @@ class Builder:
         self.db.close()
 
 
+# ---------------------------------------------------------------------------
+# 무료 대체 소스: WordNet(영영) + open-english-korean-dict / kengdic(영한)
+# kaikki 덤프를 못 받을 때 쓰거나, kaikki 와 같이 써서 한국어 뜻을 보강한다.
+# ---------------------------------------------------------------------------
+
+WN_POS = {"n": "noun", "v": "verb", "a": "adj", "s": "adj", "r": "adv"}
+WN_FILES = {"noun": "noun", "verb": "verb", "adj": "adj", "adv": "adv"}
+
+# WordNet 의 "용법 분야"(;u) / "지역"(;r) 포인터가 가리키는 synset 단어 → 앱 태그
+WN_USAGE_TAGS = {
+    "slang": "slang", "cant": "slang", "colloquialism": "informal", "vulgarism": "vulgar",
+    "obscenity": "vulgar", "disparagement": "derogatory", "ethnic_slur": "offensive",
+    "archaism": "archaic", "euphemism": "euphemistic", "figure_of_speech": "figuratively",
+    "trope": "figuratively", "United_Kingdom": "UK", "Britain": "UK", "United_States": "US",
+    "Australia": "Australia",
+}
+
+
+def _wn_word(w: str) -> str:
+    return re.sub(r"\([a-z]+\)$", "", w).replace("_", " ")
+
+
+def wn_gloss(gloss: str, max_examples: int, max_len: int) -> tuple[str, list[dict]]:
+    """'정의; "예문1"; "예문2"' → (정의, 예문)"""
+    examples = [{"text": e.strip()} for e in re.findall(r'"([^"]+)"', gloss) if len(e.strip()) <= max_len]
+    definition = re.split(r';\s*"', gloss, maxsplit=1)[0].strip().rstrip(";").strip()
+    return definition, examples[:max_examples]
+
+
+def regular_forms(word: str, pos: str, irregular: bool = False) -> list[tuple[str, str]]:
+    """규칙 활용형 (불규칙은 .exc 파일에서). irregular 면 과거형·복수형은 만들지 않는다 (gived, childs 방지)"""
+    if " " in word or not word.isalpha() or not word.islower():
+        return []
+    vowels = "aeiou"
+    out: list[tuple[str, str]] = []
+    if pos in ("verb", "noun"):
+        if word.endswith(("s", "x", "z", "ch", "sh")) or (pos == "verb" and word.endswith("o")):
+            s3 = word + "es"
+        elif len(word) > 1 and word.endswith("y") and word[-2] not in vowels:
+            s3 = word[:-1] + "ies"
+        else:
+            s3 = word + "s"
+        if not (pos == "noun" and irregular):
+            out.append((s3, "plural" if pos == "noun" else "present singular third-person"))
+    if pos == "verb":
+        cvc = (len(word) <= 4 and len(word) >= 3 and word[-1] not in vowels + "wxy"
+               and word[-2] in vowels and word[-3] not in vowels)
+        stem = word + word[-1] if cvc else word
+        if word.endswith("e"):
+            past = word + "d"
+        elif len(word) > 1 and word.endswith("y") and word[-2] not in vowels:
+            past = word[:-1] + "ied"
+        else:
+            past = stem + "ed"
+        if word.endswith("ie"):
+            ing = word[:-2] + "ying"
+        elif word.endswith("e") and not word.endswith(("ee", "ye", "oe")) and len(word) > 2:
+            ing = word[:-1] + "ing"
+        else:
+            ing = stem + "ing"
+        if not irregular:
+            out.append((past, "past"))
+        out.append((ing, "participle present"))
+    return out
+
+
+def load_wordnet(b: "Builder", wn_dir: str) -> dict[str, set[str]]:
+    """WordNet 3.x 사전 파일(data.*, index.*, *.exc) → 영영 항목. 단어별 품사 집합을 돌려준다."""
+    synsets: dict[tuple[str, str], dict] = {}
+    for fpos in ("noun", "verb", "adj", "adv"):
+        with open(os.path.join(wn_dir, f"data.{fpos}"), encoding="utf-8", errors="replace") as f:
+            for line in f:
+                if line.startswith(" ") or "|" not in line:
+                    continue
+                head, gloss = line.split(" | ", 1) if " | " in line else line.split("|", 1)
+                t = head.split()
+                off, ss_type = t[0], t[2]
+                n = int(t[3], 16)
+                words = [t[4 + 2 * k] for k in range(n)]
+                i = 4 + 2 * n
+                p_cnt = int(t[i])
+                ptrs = [(t[i + 1 + 4 * k], t[i + 2 + 4 * k], t[i + 3 + 4 * k]) for k in range(p_cnt)]
+                key_pos = "a" if ss_type == "s" else ss_type
+                synsets[(key_pos, off)] = {"words": words, "ptrs": ptrs, "gloss": gloss.strip()}
+
+    def tags_for(ss: dict) -> list[str]:
+        tags = []
+        for sym, off, p in ss["ptrs"]:
+            if sym in (";u", ";r"):
+                target = synsets.get(("a" if p == "s" else p, off))
+                for w in (target or {}).get("words", []):
+                    tag = WN_USAGE_TAGS.get(re.sub(r"\(.*\)$", "", w))
+                    if tag and tag not in tags:
+                        tags.append(tag)
+                        break
+        return tags
+
+    # 불규칙 활용이 있는 기본형 (품사별)
+    irregular: dict[str, set[str]] = {}
+    for fpos in ("noun", "verb", "adj", "adv"):
+        path = os.path.join(wn_dir, f"{fpos}.exc")
+        if os.path.exists(path):
+            with open(path, encoding="utf-8") as f:
+                irregular[fpos] = {base.replace("_", " ") for line in f for base in line.split()[1:]}
+
+    word_pos: dict[str, set[str]] = {}
+    count = 0
+    for fpos, pchar in (("noun", "n"), ("verb", "v"), ("adj", "a"), ("adv", "r")):
+        with open(os.path.join(wn_dir, f"index.{fpos}"), encoding="utf-8", errors="replace") as f:
+            for line in f:
+                if line.startswith(" "):
+                    continue
+                t = line.split()
+                lemma = t[0].replace("_", " ")
+                if not b.keep_word(norm(lemma)):
+                    continue
+                synset_cnt = int(t[2])
+                offsets = t[-synset_cnt:]
+                senses = []
+                display = lemma
+                for off in offsets[: b.args.max_senses]:
+                    ss = synsets.get((pchar, off))
+                    if not ss:
+                        continue
+                    for w in ss["words"]:
+                        if _wn_word(w).lower() == lemma:
+                            display = _wn_word(w)
+                            break
+                    definition, examples = wn_gloss(ss["gloss"], b.args.max_examples, b.args.max_example_len)
+                    if definition:
+                        senses.append({"gloss": definition, "tags": tags_for(ss), "examples": examples, "ko": []})
+                if not senses:
+                    continue
+                # 고유명사(대문자), 세 단어 이상 명사(학명·전문용어)는 자막 공부에 거의 안 쓰여서 뺀다 (용량 절약)
+                if fpos == "noun" and (display != display.lower() or display.count(" ") >= 2
+                                       or display.startswith(("genus ", "family ", "order "))):
+                    continue
+                b.insert_entry(display, fpos, "en", senses)
+                word_pos.setdefault(norm(lemma), set()).add(fpos)
+                for form, tag in regular_forms(lemma, fpos, lemma in irregular.get(fpos, set())):
+                    b.add_form(form, lemma, [tag])
+                count += 1
+                if count % 20000 == 0:
+                    b.db.commit()
+                    print(f"  WordNet {count:,} 항목", file=sys.stderr)
+
+    for fpos in ("noun", "verb", "adj", "adv"):
+        path = os.path.join(wn_dir, f"{fpos}.exc")
+        if not os.path.exists(path):
+            continue
+        with open(path, encoding="utf-8") as f:
+            for line in f:
+                parts = line.split()
+                for base in parts[1:]:
+                    b.add_form(parts[0].replace("_", " "), base.replace("_", " "), ["irregular"])
+    return word_pos
+
+
+ENGLISH_KEY = re.compile(r"^[a-z][a-z'\-]*( [a-z][a-z'\-]*){0,3}$")
+
+
+def korean_pos(k: str) -> str:
+    """한국어 뜻 모양으로 품사 짐작: ~다 동사, ~한/~운/~인 형용사, ~히/~게 부사, 나머지 명사"""
+    k = k.strip()
+    if k.endswith("다"):
+        return "verb"
+    if re.search(r"(한|운|인|된|적인|스러운|로운|같은)$", k):
+        return "adj"
+    if re.search(r"(히|게|으로|로)$", k) and len(k) > 1:
+        return "adv"
+    return "noun"
+
+
+def _split_ko(text: str | None) -> list[str]:
+    if not text:
+        return []
+    out = []
+    for part in re.split(r"[;,/]", text):
+        part = re.sub(r"\s+", " ", part).strip()
+        if part and re.search(r"[가-힣]", part) and len(part) <= 30:
+            out.append(part)
+    return out
+
+
+def load_oekd(path: str) -> dict[str, dict]:
+    """open-english-korean-dict 의 word_dictionary.sqlite → {단어: {ko: [...], ipa}}"""
+    db = sqlite3.connect(path)
+    out: dict[str, dict] = {}
+    for word, ko, ko2, ipa in db.execute("SELECT word, meaning_ko, meaning_secondary, ipa FROM words"):
+        w = norm(word or "")
+        if not w:
+            continue
+        out[w] = {"ko": _split_ko(ko) + _split_ko(ko2), "ipa": ipa or None}
+    db.close()
+    return out
+
+
+def load_kengdic(path: str) -> dict[str, list[str]]:
+    """kengdic.tsv(한→영) 를 뒤집어 {영어: [한국어...]}"""
+    import csv
+    out: dict[str, list[str]] = {}
+    with open(path, encoding="utf-8") as f:
+        r = csv.reader(f, delimiter="\t")
+        next(r, None)
+        for row in r:
+            if len(row) < 4:
+                continue
+            ko = re.sub(r"\s+", " ", row[1]).strip()
+            if not ko or not re.search(r"[가-힣]", ko) or len(ko) > 20:
+                continue
+            for g in re.split(r"[;,/]", row[3]):
+                g = re.sub(r"\(.*?\)", "", g).strip().lower()
+                g = re.sub(r"^(to|a|an|the) ", "", g)
+                g = re.sub(r"\s+", " ", g)
+                if ENGLISH_KEY.match(g):
+                    lst = out.setdefault(g, [])
+                    if ko not in lst:
+                        lst.append(ko)
+    return out
+
+
+def load_korean(b: "Builder", oekd: dict[str, dict], kengdic: dict[str, list[str]],
+                word_pos: dict[str, set[str]], max_meanings: int = 8):
+    """영한 항목: 대표 뜻(open-english-korean-dict) 먼저, kengdic 으로 보강. 품사별로 묶는다."""
+    words = list(dict.fromkeys(list(oekd) + list(kengdic)))
+    for w in words:
+        if not ENGLISH_KEY.match(w) or not b.keep_word(w):
+            continue
+        meanings = list(dict.fromkeys((oekd.get(w, {}).get("ko") or []) + kengdic.get(w, [])))[:max_meanings]
+        if not meanings:
+            continue
+        known = word_pos.get(w, set())
+        groups: dict[str, list[str]] = {}
+        for m in meanings:
+            pos = korean_pos(m)
+            if known and pos not in known:
+                if pos == "verb" and "adj" in known:
+                    pos = "adj"  # 시원하다 처럼 '-다' 로 끝나는 형용사
+                elif pos == "noun" and len(known) == 1:
+                    # 명사 추정은 가장 약한 근거라 영영 품사가 하나뿐이면 그쪽으로
+                    pos = next(iter(known))
+            groups.setdefault(pos, []).append(m)
+        ipa = oekd.get(w, {}).get("ipa")
+        for pos, ms in groups.items():
+            b.insert_entry(w, pos, "ko", [{"gloss": m, "tags": [], "examples": [], "ko": []} for m in ms], ipa=ipa)
+
+
 def build(args: argparse.Namespace) -> dict:
     b = Builder(args.out, args)
     for src, source in ((args.en, "en"), (args.ko, "ko")):
@@ -356,6 +619,18 @@ def build(args: argparse.Namespace) -> dict:
             b.add_entry(obj, source)
             if i % 50_000 == 0:
                 b.db.commit()
+    word_pos: dict[str, set[str]] = {}
+    if args.wordnet:
+        print(f"[WordNet] {args.wordnet}", file=sys.stderr)
+        word_pos = load_wordnet(b, args.wordnet)
+    if args.oekd or args.kengdic:
+        print("[영한] open-english-korean-dict / kengdic", file=sys.stderr)
+        load_korean(
+            b,
+            load_oekd(args.oekd) if args.oekd else {},
+            load_kengdic(args.kengdic) if args.kengdic else {},
+            word_pos,
+        )
     b.finish()
     return b.stats
 
@@ -364,6 +639,9 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("--en", help="영어판 raw-wiktextract-data.jsonl(.gz) 경로 또는 URL")
     p.add_argument("--ko", help="한국어판 raw-wiktextract-data.jsonl(.gz) 경로 또는 URL")
+    p.add_argument("--wordnet", help="WordNet 3.x dict 폴더 (data.noun, index.noun, verb.exc ...)")
+    p.add_argument("--oekd", help="open-english-korean-dict 의 word_dictionary.sqlite")
+    p.add_argument("--kengdic", help="kengdic.tsv")
     p.add_argument("--out", default="TubeVocab/Resources/dict.db")
     p.add_argument("--wordlist", help="이 단어들(+그 단어로 시작하는 숙어)만 넣기")
     p.add_argument("--max-senses", type=int, default=15)
@@ -372,8 +650,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p.add_argument("--skip-pos", nargs="*", help="추가로 뺄 품사 (기본: name character symbol ...)")
     p.add_argument("--limit", type=int, default=0, help="파일당 영어 항목 수 제한 (시험용)")
     args = p.parse_args(argv)
-    if not args.en and not args.ko:
-        p.error("--en 또는 --ko 중 하나는 필요합니다")
+    if not (args.en or args.ko or args.wordnet or args.oekd or args.kengdic):
+        p.error("--en / --ko / --wordnet / --oekd / --kengdic 중 하나는 필요합니다")
     return args
 
 

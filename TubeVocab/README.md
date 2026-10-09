@@ -35,35 +35,42 @@
 **단어장**: 저장 단어 목록, 검색, 밀어서 삭제, 원문 문장 보기, "영상에서 보기", 사전 직접 검색.
 
 **빈칸 시험**: 저장했던 그 문장에서 단어를 빈칸으로 가립니다.
-- 직접 입력과 4지선다 중에서 고를 수 있습니다.
+- 빈칸에 들어갈 말을 직접 입력합니다.
 - 힌트는 한국어 자막과 첫 글자 두 가지입니다.
 - 활용형과 기본형 모두 정답으로 인정합니다.
 - 맞히면 1·3·7·14·30·60일 뒤, 틀리면 10분 뒤에 다시 나옵니다.
 
-## 사전 만들기 (dict.db)
+## 사전 (dict.db)
 
-앱에 들어 있는 `TubeVocab/Resources/dict.db` 는 **샘플 단어 몇십 개짜리**입니다
-(`scripts/sample/` 의 예시 데이터로 만든 것). 실제로 쓰려면 kaikki.org 덤프로 다시 만드세요.
+앱에 들어 있는 `TubeVocab/Resources/dict.db`(약 40MB)는 무료 사전 세 개를 합쳐 만든 것입니다.
+
+| 출처 | 들어간 내용 | 라이선스 |
+|---|---|---|
+| [open-english-korean-dict](https://github.com/jhseo1211/open-english-korean-dict) | 단어 4.8만 개의 한국어 대표 뜻, 발음 기호 | CC BY-SA 4.0 |
+| [kengdic](https://github.com/garfieldnate/kengdic) | 한국어 뜻 보강, give up→포기하다 같은 숙어 | MPL 2.0 / LGPL |
+| [WordNet 3.0](https://wordnet.princeton.edu/) | 영어 뜻풀이·예문, went→go 같은 불규칙 활용, 구동사, 일부 속어·구어 표시 | WordNet License |
+
+영영 항목 약 15만 개, 영한 항목 약 9만 개, 숙어·구동사 약 5.6만 개가 들어 있습니다.
+open-english-korean-dict 가 CC BY-SA 4.0 이므로 **dict.db 는 CC BY-SA 4.0 으로 배포**하고, 앱의 단어장 → 사전 검색 화면 아래에 출처를 표시합니다.
+
+다시 만들기 (원본 세 개를 받아서 변환, 10초 정도):
 
 ```bash
 cd TubeVocab
-# 덤프 받기 (영어판 수 GB, 한국어판 수백 MB)
-curl -LO https://kaikki.org/dictionary/raw-wiktextract-data.jsonl.gz
-curl -L -o ko-raw-wiktextract-data.jsonl.gz https://kaikki.org/kowiktionary/raw-wiktextract-data.jsonl.gz
-
-python3 scripts/build_dict.py \
-  --en raw-wiktextract-data.jsonl.gz \
-  --ko ko-raw-wiktextract-data.jsonl.gz \
-  --out TubeVocab/Resources/dict.db
+sh scripts/make_free_dict.sh
 ```
 
-- 경로 대신 URL 을 줘도 받으면서 바로 변환합니다. 표준 라이브러리만 씁니다 (Python 3.9+).
-- 넣는 것은 뜻, 태그(속어/비격식/관용 등), 예문, 활용형, 숙어·구동사, 한국어 뜻입니다.
-  한국어 뜻은 영어판 번역란과 한국어판 영한 항목 두 군데서 가져옵니다.
-- 전체 덤프로 만들면 파일이 꽤 커집니다 (아직 재 보지 않았어요). 앱 크기를 줄이려면 아래 옵션을 쓰세요.
-  - `--wordlist 단어목록.txt`: 한 줄에 한 단어. 그 단어로 시작하는 숙어·구동사는 같이 들어갑니다.
-  - `--max-examples 1`, `--max-senses 8`
-- 다시 만든 뒤 Xcode에서 다시 빌드하면 새 사전이 들어갑니다.
+### 더 풍부한 사전 (선택)
+
+위키낱말사전(kaikki.org) 덤프를 같이 넣으면 속어·비격식 표시와 예문이 훨씬 많아집니다. 대신 파일이 커집니다.
+
+```bash
+curl -LO https://kaikki.org/dictionary/raw-wiktextract-data.jsonl.gz
+curl -L -o ko-raw-wiktextract-data.jsonl.gz https://kaikki.org/kowiktionary/raw-wiktextract-data.jsonl.gz
+sh scripts/make_free_dict.sh --en raw-wiktextract-data.jsonl.gz --ko ko-raw-wiktextract-data.jsonl.gz
+```
+
+- `--wordlist 단어목록.txt` 로 단어를 제한하면 크기를 줄일 수 있습니다 (그 단어로 시작하는 숙어는 같이 들어감).
 - 변환기 테스트: `python3 -m unittest discover -s scripts -p 'test_*.py'`
 
 ## 알아 둘 점
@@ -93,10 +100,11 @@ TubeVocab/
 │   ├── Data/                   SQLite 사전, 자막 내려받기
 │   ├── Models/                 플레이어(WKWebView), 단어장, 앱 상태
 │   ├── Views/                  화면 (영상, 사전 시트, 단어장, 시험, 하단 탭)
-│   └── Resources/dict.db       내장 사전 (샘플)
+│   └── Resources/dict.db       내장 사전 (CC BY-SA 4.0)
 ├── TubeVocabTests/             XCTest (자막 정렬, 사전 조회, 빈칸 생성 등)
 └── scripts/
-    ├── build_dict.py           kaikki 덤프 → dict.db
+    ├── make_free_dict.sh       무료 사전 3개 받아서 dict.db 만들기
+    ├── build_dict.py           WordNet / 영한 사전 / kaikki 덤프 → dict.db
     ├── test_build_dict.py
     └── sample/                 샘플 덤프 (kaikki 형식)
 ```

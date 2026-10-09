@@ -3,20 +3,14 @@ import UIKit
 
 /// 시험 탭: 저장했던 문장에서 단어를 빈칸으로 가리고 맞히기 (간격 반복)
 struct QuizView: View {
-    enum Mode: String, CaseIterable {
-        case typing = "직접 입력"
-        case choice = "4지선다"
-    }
-
     @Environment(AppModel.self) private var app
-    @State private var mode: Mode = .typing
     @State private var session: QuizSession?
 
     var body: some View {
         NavigationStack {
             Group {
                 if let session {
-                    QuizCard(session: session, mode: mode) { self.session = nil }
+                    QuizCard(session: session) { self.session = nil }
                         .id(session.id)
                 } else {
                     start
@@ -33,11 +27,6 @@ struct QuizView: View {
         let due = words.filter { $0.dueAt <= now }.sorted { $0.dueAt < $1.dueAt }
         let next = words.map(\.dueAt).filter { $0 > now }.min()
         return VStack(spacing: 18) {
-            Picker("방식", selection: $mode) {
-                ForEach(Mode.allCases, id: \.self) { Text($0.rawValue).tag($0) }
-            }
-            .pickerStyle(.segmented)
-
             VStack(spacing: 6) {
                 Text("\(due.count)").font(.system(size: 56, weight: .bold))
                 Text("지금 복습할 단어").foregroundStyle(.secondary)
@@ -81,18 +70,15 @@ struct QuizSession: Identifiable {
 
 private struct QuizCard: View {
     let session: QuizSession
-    let mode: QuizView.Mode
     let onFinish: () -> Void
 
     @Environment(AppModel.self) private var app
     @State private var index = 0
     @State private var input = ""
     @State private var verdict: Bool?
-    @State private var picked: String?
     @State private var showKoHint = false
     @State private var showLetterHint = false
     @State private var score = 0
-    @State private var choices: [String] = []
     @FocusState private var focused: Bool
 
     private var word: SavedWord? { index < session.words.count ? session.words[index] : nil }
@@ -115,11 +101,7 @@ private struct QuizCard: View {
 
                     hints(w)
 
-                    if mode == .typing {
-                        typing(w)
-                    } else {
-                        choiceButtons(w)
-                    }
+                    typing(w)
 
                     if let verdict {
                         feedback(w, correct: verdict)
@@ -195,31 +177,6 @@ private struct QuizCard: View {
         }
     }
 
-    private func choiceButtons(_ w: SavedWord) -> some View {
-        VStack(spacing: 8) {
-            ForEach(choices, id: \.self) { c in
-                Button {
-                    picked = c
-                    check(c, w)
-                } label: {
-                    Text(c)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 6)
-                }
-                .buttonStyle(.bordered)
-                .tint(choiceTint(c))
-                .disabled(verdict != nil)
-            }
-        }
-    }
-
-    private func choiceTint(_ c: String) -> Color {
-        guard verdict != nil else { return .accentColor }
-        if c == answer { return .green }
-        if c == picked { return .red }
-        return .gray
-    }
-
     private func feedback(_ w: SavedWord, correct: Bool) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             Label(correct ? "정답!" : "틀렸어요 · 정답: \(answer)",
@@ -247,13 +204,9 @@ private struct QuizCard: View {
     private func prepare() {
         input = ""
         verdict = nil
-        picked = nil
         showKoHint = false
         showLetterHint = false
-        guard let w = word else { return }
-        let pool = app.vocab.words.filter { $0.id != w.id }.map(\.surface)
-        choices = makeChoices(answer: answer, target: w.target, pool: pool, rand: { Double.random(in: 0..<1) })
-        focused = mode == .typing
+        focused = word != nil
     }
 
     private func check(_ value: String, _ w: SavedWord) {

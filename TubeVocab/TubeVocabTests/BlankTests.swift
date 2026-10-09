@@ -49,31 +49,6 @@ final class BlankTests: XCTestCase {
         XCTAssertEqual(firstLetterHint("went"), "w___")
         XCTAssertEqual(firstLetterHint("gave up"), "g___ u_")
     }
-
-    func testChoicesAreUniqueAndExcludeSameLemma() {
-        let c = makeChoices(answer: "went", target: went, pool: ["go", "gone", "apple", "run", "cool", "apple"], rand: seededRandom(42))
-        XCTAssertEqual(c.count, 4)
-        XCTAssertTrue(c.contains("went"))
-        XCTAssertEqual(Set(c.map { $0.lowercased() }).count, 4)
-        XCTAssertFalse(c.contains("go"))
-        XCTAssertFalse(c.contains("gone"))
-    }
-
-    func testChoicesFillFromFallback() {
-        XCTAssertEqual(makeChoices(answer: "went", target: went, pool: [], rand: seededRandom(1)).count, 4)
-    }
-
-    func testMultiWordAnswerPrefersMultiWordDistractors() {
-        let c = makeChoices(answer: "gave up", target: BlankTarget(surface: "gave up", lemma: "give up", forms: []),
-                            pool: ["look into", "run out", "cat", "dog", "tree"], rand: seededRandom(3))
-        XCTAssertGreaterThanOrEqual(c.filter { $0.contains(" ") }.count, 3)
-    }
-
-    func testSameSeedSameChoices() {
-        let a = makeChoices(answer: "went", target: went, pool: ["a1", "b2", "c3", "d4"], rand: seededRandom(7))
-        let b = makeChoices(answer: "went", target: went, pool: ["a1", "b2", "c3", "d4"], rand: seededRandom(7))
-        XCTAssertEqual(a, b)
-    }
 }
 
 final class SrsTests: XCTestCase {
