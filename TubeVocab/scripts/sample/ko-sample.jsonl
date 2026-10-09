@@ -1,0 +1,19 @@
+{"word": "go", "lang": "영어", "lang_code": "en", "pos": "verb", "senses": [{"glosses": ["가다"], "examples": [{"text": "Let's go home.", "translation": "집에 가자."}]}, {"glosses": ["떠나다"]}, {"glosses": ["(말을) 하다"], "raw_tags": ["구어"]}]}
+{"word": "give up", "lang": "영어", "lang_code": "en", "pos": "verb", "senses": [{"glosses": ["포기하다"], "raw_tags": ["관용"]}, {"glosses": ["그만두다, 끊다"]}]}
+{"word": "pick up", "lang": "영어", "lang_code": "en", "pos": "verb", "senses": [{"glosses": ["줍다, 집어 들다"]}, {"glosses": ["(차로) 데리러 가다"]}, {"glosses": ["(어깨너머로) 익히다"], "raw_tags": ["비격식"]}]}
+{"word": "cool", "lang": "영어", "lang_code": "en", "pos": "형용사", "senses": [{"glosses": ["시원한"]}, {"glosses": ["멋진, 끝내주는"], "raw_tags": ["속어"]}, {"glosses": ["침착한"]}]}
+{"word": "sick", "lang": "영어", "lang_code": "en", "pos": "형용사", "senses": [{"glosses": ["아픈"]}, {"glosses": ["쩌는, 끝내주는"], "raw_tags": ["속어"]}]}
+{"word": "book", "lang": "영어", "lang_code": "en", "pos": "명사", "senses": [{"glosses": ["책"]}]}
+{"word": "book", "lang": "영어", "lang_code": "en", "pos": "동사", "senses": [{"glosses": ["예약하다"]}]}
+{"word": "see", "lang": "영어", "lang_code": "en", "pos": "동사", "senses": [{"glosses": ["보다"]}, {"glosses": ["알다, 이해하다"]}]}
+{"word": "saw", "lang": "영어", "lang_code": "en", "pos": "명사", "senses": [{"glosses": ["톱"]}]}
+{"word": "chill", "lang": "영어", "lang_code": "en", "pos": "동사", "senses": [{"glosses": ["차게 하다"]}, {"glosses": ["쉬다, 진정하다"], "raw_tags": ["속어"]}]}
+{"word": "hang out", "lang": "영어", "lang_code": "en", "pos": "동사", "senses": [{"glosses": ["어울려 놀다, 시간을 보내다"], "raw_tags": ["구어"]}]}
+{"word": "figure out", "lang": "영어", "lang_code": "en", "pos": "동사", "senses": [{"glosses": ["알아내다, 이해하다"]}]}
+{"word": "run out", "lang": "영어", "lang_code": "en", "pos": "동사", "senses": [{"glosses": ["다 떨어지다, 바닥나다"]}]}
+{"word": "learn", "lang": "영어", "lang_code": "en", "pos": "동사", "senses": [{"glosses": ["배우다"]}, {"glosses": ["알게 되다"]}]}
+{"word": "word", "lang": "영어", "lang_code": "en", "pos": "명사", "senses": [{"glosses": ["단어, 낱말"]}, {"glosses": ["말"]}]}
+{"word": "kind of", "lang": "영어", "lang_code": "en", "pos": "부사", "senses": [{"glosses": ["좀, 약간, 어느 정도"], "raw_tags": ["구어"]}]}
+{"word": "awesome", "lang": "영어", "lang_code": "en", "pos": "형용사", "senses": [{"glosses": ["굉장한, 끝내주는"], "raw_tags": ["구어"]}]}
+{"word": "lit", "lang": "영어", "lang_code": "en", "pos": "형용사", "senses": [{"glosses": ["불이 켜진"]}, {"glosses": ["신나는, 끝내주는"], "raw_tags": ["속어"]}]}
+{"word": "가다", "lang": "한국어", "lang_code": "ko", "pos": "verb", "senses": [{"glosses": ["move"]}]}
