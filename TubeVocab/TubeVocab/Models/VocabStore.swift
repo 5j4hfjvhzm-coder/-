@@ -1,6 +1,10 @@
 import Foundation
 import Observation
 
+func nowMs() -> Int {
+    Int(Date().timeIntervalSince1970 * 1000)
+}
+
 /// 저장한 뜻 하나
 struct Meaning: Codable, Hashable {
     /// 사전 뜻풀이 (영한 사전이면 한국어, 영영 사전이면 영어)
@@ -34,13 +38,17 @@ struct SavedWord: Codable, Identifiable, Hashable {
     var videoId: String
     var timeMs: Int
     var createdAt: Int = nowMs()
+    /// 예전 간격 반복 기록. 지금은 쓰지 않지만 저장 파일 호환을 위해 남겨 둔다.
     var stage: Int = 0
-    /// 저장 직후 바로 시험에 나오게
     var dueAt: Int = nowMs()
     var correct: Int = 0
     var wrong: Int = 0
     /// 고른 뜻들 (예전에 저장한 단어는 nil → sense/senseKo 하나만)
     var meanings: [Meaning]? = nil
+    /// ★ 헷갈리는 단어 (예전 파일에는 없으므로 옵셔널)
+    var starred: Bool? = nil
+
+    var star: Bool { starred ?? false }
 
     var target: BlankTarget { BlankTarget(surface: surface, lemma: lemma, forms: forms) }
 
@@ -130,12 +138,17 @@ final class VocabStore {
         words.first { $0.id == id }
     }
 
-    func answer(id: UUID, correct: Bool) {
+    /// 시험 결과 기록 (맞힘/틀림 횟수)
+    func recordAnswer(id: UUID, correct: Bool) {
         guard let i = words.firstIndex(where: { $0.id == id }) else { return }
-        let next = review(SrsState(stage: words[i].stage, dueAt: words[i].dueAt), correct: correct, now: nowMs())
-        words[i].stage = next.stage
-        words[i].dueAt = next.dueAt
         if correct { words[i].correct += 1 } else { words[i].wrong += 1 }
+        changed()
+    }
+
+    /// ★ 헷갈리는 단어 표시 켜고 끄기
+    func toggleStar(id: UUID) {
+        guard let i = words.firstIndex(where: { $0.id == id }) else { return }
+        words[i].starred = !words[i].star
         changed()
     }
 

@@ -11,6 +11,7 @@ final class AppModel {
     var tab: AppTab = .video
     let player = PlayerModel()
     let vocab = VocabStore()
+    let quiz = QuizModel()
     let dict: DictStore?
     let dictError: String?
     /// 열려 있는 사전 시트 (영상 위 자막, 아래 자막 카드 어디서 탭해도 같은 시트)

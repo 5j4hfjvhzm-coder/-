@@ -79,8 +79,9 @@ private struct WordRow: View {
                 }
                 TagBadges(tags: word.senseTags)
                 Spacer()
-                Text(describeDue(word.dueAt, now: nowMs()))
-                    .font(.caption2).foregroundStyle(.secondary)
+                if word.star {
+                    Text("★").font(.caption).foregroundStyle(.orange)
+                }
             }
             Text(word.summary)
                 .font(.subheadline).lineLimit(1)
@@ -143,8 +144,8 @@ struct WordDetailView: View {
                         }
                     }
                 }
-                Section("복습") {
-                    LabeledContent("다음 복습", value: describeDue(w.dueAt, now: nowMs()))
+                Section("시험") {
+                    Toggle("★ 헷갈리는 단어", isOn: Binding(get: { w.star }, set: { _ in app.vocab.toggleStar(id: w.id) }))
                     LabeledContent("맞힘 / 틀림", value: "\(w.correct) / \(w.wrong)")
                 }
                 Section {

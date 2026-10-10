@@ -102,3 +102,10 @@ func firstLetterHint(_ answer: String) -> String {
         return "_"
     })
 }
+
+/// 퀴즈 힌트: 첫 글자 + 나머지는 밑줄 + 글자 수 (예전 빈칸 단어장과 같은 모양)
+/// 예: "went" → "w＿＿＿ (4글자)", "gave up" → "g＿＿＿ u＿ (6글자)"
+func quizHintText(_ answer: String) -> String {
+    let letters = answer.filter { !$0.isWhitespace }.count
+    return firstLetterHint(answer).replacingOccurrences(of: "_", with: "＿") + " (\(letters)글자)"
+}

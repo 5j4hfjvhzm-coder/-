@@ -48,28 +48,8 @@ final class BlankTests: XCTestCase {
     func testFirstLetterHint() {
         XCTAssertEqual(firstLetterHint("went"), "w___")
         XCTAssertEqual(firstLetterHint("gave up"), "g___ u_")
-    }
-}
-
-final class SrsTests: XCTestCase {
-    private let day = 86_400_000
-
-    func testIntervalsWhenCorrect() {
-        var s = SrsState(stage: 0, dueAt: 0)
-        var gaps: [Int] = []
-        for _ in 0..<8 {
-            s = review(s, correct: true, now: 0)
-            gaps.append(s.dueAt / day)
-        }
-        XCTAssertEqual(gaps, [1, 3, 7, 14, 30, 60, 60, 60])
-    }
-
-    func testWrongResetsAndComesBackInTenMinutes() {
-        XCTAssertEqual(review(SrsState(stage: 4, dueAt: 0), correct: false, now: 1000),
-                       SrsState(stage: 0, dueAt: 1000 + wrongDelayMs))
-        XCTAssertEqual(describeDue(wrongDelayMs, now: 0), "10분 뒤")
-        XCTAssertEqual(describeDue(-1, now: 0), "지금 복습")
-        XCTAssertEqual(describeDue(3 * day, now: 0), "3일 뒤")
+        XCTAssertEqual(quizHintText("went"), "w＿＿＿ (4글자)")
+        XCTAssertEqual(quizHintText("gave up"), "g＿＿＿ u＿ (6글자)")
     }
 }
 
