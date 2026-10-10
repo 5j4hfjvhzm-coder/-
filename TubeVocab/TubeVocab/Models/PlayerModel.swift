@@ -34,7 +34,7 @@ final class PlayerModel {
     @ObservationIgnored private var loadTask: Task<Void, Never>?
 
     /// loadHTMLString 의 baseURL. 유튜브 임베드는 Referer 가 없으면 오류(152/153)를 내므로 https 출처를 준다.
-    static let origin = "https://tubevocab.app"
+    static let origin = playerOrigin
 
     var currentIndex: Int { findCueIndex(cues, timeMs) }
 
@@ -64,12 +64,9 @@ final class PlayerModel {
         webView.scrollView.isScrollEnabled = false
         webView.scrollView.bounces = false
         bridge.model = self
-        // 영상 화면 두 번 탭 → 한국어 자막 보기 (유튜브 플레이어 자체 탭 동작은 그대로)
-        let doubleTap = UITapGestureRecognizer(target: bridge, action: #selector(PlayerBridge.doubleTapped))
-        doubleTap.numberOfTapsRequired = 2
-        doubleTap.cancelsTouchesInView = false
-        doubleTap.delegate = bridge
-        webView.addGestureRecognizer(doubleTap)
+        // 영상 안 유튜브 로고·제목 등을 눌러도 플레이어 페이지를 벗어나지 않게 (바깥 링크는 Safari 로)
+        webView.navigationDelegate = bridge
+        webView.uiDelegate = bridge
     }
 
     // MARK: 영상
@@ -125,19 +122,25 @@ final class PlayerModel {
         webView.evaluateJavaScript(script, completionHandler: nil)
     }
 
-    fileprivate func handle(event: String, value: Any?) {
+    /// 웹뷰가 죽었을 때 지금 영상·시간으로 다시 불러오기
+    fileprivate func reloadPlayer() {
+        guard let id = videoId else { return }
+        webView.loadHTMLString(Self.playerHTML(videoId: id, startSeconds: timeMs / 1000), baseURL: URL(string: Self.origin))
+    }
+
+    fileprivate func handle(event: String, value: NSNumber?) {
         switch event {
         case "state":
             // 1 재생, 2 일시정지, 0 끝, 3 버퍼링
-            switch value as? Int {
+            switch value?.intValue {
             case 1: isPlaying = true
             case 0, 2: isPlaying = false
             default: break
             }
         case "time":
-            if let s = value as? Double { timeMs = Int(s * 1000) }
+            if let s = value?.doubleValue, s.isFinite, s >= 0 { timeMs = Int(s * 1000) }
         case "error":
-            let code = value as? Int ?? 0
+            let code = value?.intValue ?? 0
             error = (code == 101 || code == 150 || code == 152 || code == 153)
                 ? "이 영상은 앱 안에서 재생할 수 없어요 (오류 \(code))."
                 : "재생 오류 (\(code))"
@@ -234,25 +237,48 @@ final class PlayerModel {
 }
 
 /// WKScriptMessageHandler 가 강한 참조를 잡으므로 모델은 약하게 들고 있는다.
-final class PlayerBridge: NSObject, WKScriptMessageHandler, UIGestureRecognizerDelegate {
+/// 플레이어 페이지 출처 (PlayerBridge 에서도 쓰므로 파일 상수로)
+private let playerOrigin = "https://tubevocab.app"
+
+/// 웹뷰 → 앱 연결. WKWebView 가 강한 참조를 잡으므로 모델은 약하게 들고 있는다.
+/// 모델 호출은 항상 메인 액터 Task 로 넘긴다 (어떤 스레드에서 불려도 앱이 죽지 않게).
+final class PlayerBridge: NSObject, WKScriptMessageHandler, WKNavigationDelegate, WKUIDelegate {
     weak var model: PlayerModel?
-
-    @objc func doubleTapped() {
-        MainActor.assumeIsolated {
-            model?.toggleKoReveal()
-        }
-    }
-
-    func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer,
-                           shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
-        true
-    }
 
     func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
         guard let body = message.body as? [String: Any], let event = body["event"] as? String else { return }
-        let value = body["value"]
-        MainActor.assumeIsolated {
-            model?.handle(event: event, value: value)
+        let number = body["value"] as? NSNumber
+        Task { @MainActor [weak self] in
+            self?.model?.handle(event: event, value: number)
+        }
+    }
+
+    /// 플레이어 페이지(메인 프레임)가 다른 곳으로 이동하려 하면 막고, 링크는 Safari 로 연다.
+    /// 유튜브 iframe(하위 프레임) 안의 이동은 그대로 둔다.
+    func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction) async -> WKNavigationActionPolicy {
+        let isMainFrame = navigationAction.targetFrame?.isMainFrame ?? true
+        let url = navigationAction.request.url
+        let isPlayerPage = url?.host == URL(string: playerOrigin)?.host || url?.scheme == "about"
+        if !isMainFrame || isPlayerPage { return .allow }
+        if let url, navigationAction.navigationType == .linkActivated {
+            await MainActor.run { UIApplication.shared.open(url) }
+        }
+        return .cancel
+    }
+
+    /// target=_blank / window.open (유튜브 로고, "YouTube에서 보기") → Safari
+    func webView(_ webView: WKWebView, createWebViewWith configuration: WKWebViewConfiguration,
+                 for navigationAction: WKNavigationAction, windowFeatures: WKWindowFeatures) -> WKWebView? {
+        if let url = navigationAction.request.url {
+            Task { @MainActor in UIApplication.shared.open(url) }
+        }
+        return nil
+    }
+
+    /// 웹뷰 프로세스가 죽으면(메모리 부족 등) 빈 화면 대신 플레이어를 다시 띄운다
+    func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {
+        Task { @MainActor [weak self] in
+            self?.model?.reloadPlayer()
         }
     }
 }

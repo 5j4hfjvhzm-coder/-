@@ -146,7 +146,7 @@ struct VideoView: View {
                     if player.showsKo(at: idx) {
                         Text(cue.ko).font(.body).foregroundStyle(.blue)
                     } else {
-                        Text("한국어 자막 가림 · 카드나 영상을 두 번 탭하면 보여요")
+                        Text("한국어 자막 가림 · 이 카드나 영상 위 자막을 두 번 탭하면 보여요")
                             .font(.footnote)
                             .foregroundStyle(.secondary)
                     }
