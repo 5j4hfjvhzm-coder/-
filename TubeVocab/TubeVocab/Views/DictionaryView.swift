@@ -88,6 +88,7 @@ private struct EntryCard: View {
         VStack(alignment: .leading, spacing: 4) {
             HStack(spacing: 6) {
                 Text(entry.word).font(.headline)
+                SpeakButton(text: entry.word).font(.subheadline)
                 Badge(label: posKorean[entry.pos] ?? entry.pos, tone: .blue)
                 Badge(label: entry.source == .ko ? "영한" : "영영")
                 if let ipa = entry.ipa {

@@ -195,6 +195,11 @@ private struct QuizCard: View {
                   systemImage: correct ? "checkmark.circle.fill" : "xmark.circle.fill")
                 .font(.headline)
                 .foregroundStyle(correct ? Color.green : Color.red)
+            HStack(spacing: 16) {
+                SpeakButton(text: answer, label: "단어 듣기")
+                SpeakButton(text: w.sentenceEn, label: "문장 듣기")
+            }
+            .font(.subheadline)
             Text(w.summary).font(.subheadline)
             if !w.sentenceKo.isEmpty { Text(w.sentenceKo).font(.subheadline).foregroundStyle(.secondary) }
             if !session.practice {
@@ -226,6 +231,8 @@ private struct QuizCard: View {
         let ok = isCorrect(value, w.target, blankAnswer: blank?.answer)
         verdict = ok
         if ok { score += 1 }
+        // 답을 확인하면 정답 단어를 읽어 준다
+        Speech.shared.say(answer, slow: !answer.contains(" "))
         if !session.practice {
             app.vocab.answer(id: w.id, correct: ok)
         }

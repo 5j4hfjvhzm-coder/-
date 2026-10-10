@@ -15,6 +15,7 @@ struct WordSheet: View {
         VStack(alignment: .leading, spacing: 6) {
             HStack {
                 Text(ctx.words[ctx.tap]).font(.title.bold())
+                SpeakButton(text: ctx.words[ctx.tap]).font(.title3)
                 Spacer()
                 Button("닫기") { dismiss() }
             }

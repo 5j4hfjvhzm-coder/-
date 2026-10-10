@@ -73,6 +73,7 @@ private struct WordRow: View {
         VStack(alignment: .leading, spacing: 3) {
             HStack(spacing: 6) {
                 Text(word.surface).font(.headline)
+                SpeakButton(text: word.surface).font(.caption)
                 if word.lemma != word.surface.lowercased() {
                     Text(word.lemma).font(.subheadline).foregroundStyle(.secondary)
                 }
@@ -104,6 +105,7 @@ struct WordDetailView: View {
                     VStack(alignment: .leading, spacing: 6) {
                         HStack(spacing: 6) {
                             Text(w.surface).font(.title2.bold())
+                            SpeakButton(text: w.surface).font(.title3)
                             Badge(label: posKorean[w.pos] ?? w.pos, tone: .blue)
                         }
                         if w.lemma != w.surface.lowercased() {
@@ -129,6 +131,7 @@ struct WordDetailView: View {
                 Section("원문 문장") {
                     TappableText(text: w.sentenceEn, highlight: buildHighlightIndex([w.target]))
                         .font(.body)
+                    SpeakButton(text: w.sentenceEn, label: "문장 듣기")
                     if !w.sentenceKo.isEmpty {
                         Text(w.sentenceKo).foregroundStyle(.secondary)
                     }
