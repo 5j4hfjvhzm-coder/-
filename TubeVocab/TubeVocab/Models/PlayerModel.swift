@@ -15,7 +15,10 @@ final class PlayerModel {
     private(set) var info: String?
     private(set) var error: String?
     var showEn = true
+    /// 한국어 자막 표시. 끄면 가려 두고, 영상·자막을 두 번 탭할 때만 그 줄을 보여 준다
     var showKo = true
+    /// 한국어를 끈 상태에서 두 번 탭해 펼친 줄 (다음 줄로 넘어가면 다시 가려짐)
+    private(set) var revealedKoIndex: Int?
     /// 영상 화면 위에 이중자막 겹쳐 보이기
     var showOnVideo = true
     /// 앱 자체 전체화면 (가로, 이중자막 유지)
@@ -35,6 +38,19 @@ final class PlayerModel {
 
     var currentIndex: Int { findCueIndex(cues, timeMs) }
 
+    /// 이 줄의 한국어 자막을 보여 줄지
+    func showsKo(at index: Int) -> Bool {
+        showKo || revealedKoIndex == index
+    }
+
+    /// 두 번 탭: 한국어를 꺼 둔 상태면 지금 줄의 한국어를 보였다/가렸다
+    func toggleKoReveal() {
+        guard !showKo else { return }
+        let i = currentIndex
+        guard i >= 0 else { return }
+        revealedKoIndex = revealedKoIndex == i ? nil : i
+    }
+
     init() {
         let bridge = PlayerBridge()
         let config = WKWebViewConfiguration()
@@ -48,6 +64,12 @@ final class PlayerModel {
         webView.scrollView.isScrollEnabled = false
         webView.scrollView.bounces = false
         bridge.model = self
+        // 영상 화면 두 번 탭 → 한국어 자막 보기 (유튜브 플레이어 자체 탭 동작은 그대로)
+        let doubleTap = UITapGestureRecognizer(target: bridge, action: #selector(PlayerBridge.doubleTapped))
+        doubleTap.numberOfTapsRequired = 2
+        doubleTap.cancelsTouchesInView = false
+        doubleTap.delegate = bridge
+        webView.addGestureRecognizer(doubleTap)
     }
 
     // MARK: 영상
@@ -212,8 +234,19 @@ final class PlayerModel {
 }
 
 /// WKScriptMessageHandler 가 강한 참조를 잡으므로 모델은 약하게 들고 있는다.
-final class PlayerBridge: NSObject, WKScriptMessageHandler {
+final class PlayerBridge: NSObject, WKScriptMessageHandler, UIGestureRecognizerDelegate {
     weak var model: PlayerModel?
+
+    @objc func doubleTapped() {
+        MainActor.assumeIsolated {
+            model?.toggleKoReveal()
+        }
+    }
+
+    func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer,
+                           shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
+        true
+    }
 
     func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
         guard let body = message.body as? [String: Any], let event = body["event"] as? String else { return }

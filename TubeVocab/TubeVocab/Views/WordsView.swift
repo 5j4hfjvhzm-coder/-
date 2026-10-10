@@ -11,14 +11,9 @@ struct WordsView: View {
     @Environment(AppModel.self) private var app
     @State private var mode: Mode = .mine
     @State private var query = ""
-    @State private var path: [UUID] = []
-    /// 뜻 가리기 모드: 한국어 뜻을 가리고, 두 번 탭하면 보여 준다
-    @AppStorage("hideMeanings") private var hideMeanings = false
-    /// 가리기 모드에서 두 번 탭해서 펼친 단어
-    @State private var revealed: Set<UUID> = []
 
     var body: some View {
-        NavigationStack(path: $path) {
+        NavigationStack {
             VStack(spacing: 0) {
                 Picker("보기", selection: $mode) {
                     ForEach(Mode.allCases, id: \.self) { m in
@@ -36,20 +31,6 @@ struct WordsView: View {
             }
             .navigationTitle("단어장")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                if mode == .mine {
-                    ToolbarItem(placement: .topBarTrailing) {
-                        Button {
-                            hideMeanings.toggle()
-                            revealed = []
-                        } label: {
-                            Label(hideMeanings ? "뜻 보이기" : "뜻 가리기",
-                                  systemImage: hideMeanings ? "eye.slash.fill" : "eye")
-                                .labelStyle(.titleAndIcon)
-                        }
-                    }
-                }
-            }
             .navigationDestination(for: UUID.self) { id in
                 WordDetailView(id: id)
             }
@@ -70,32 +51,10 @@ struct WordsView: View {
                 Text("영상 자막에서 단어를 탭해 저장해 보세요.")
                     .foregroundStyle(.secondary)
             }
-            if hideMeanings && !app.vocab.words.isEmpty {
-                Label("뜻을 가렸어요. 단어를 두 번 탭하면 뜻이 보여요.", systemImage: "hand.tap")
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-            }
             ForEach(filtered) { w in
-                let hidden = hideMeanings && !revealed.contains(w.id)
-                HStack {
-                    WordRow(word: w, hideMeaning: hidden)
-                    Image(systemName: "chevron.right")
-                        .font(.footnote.weight(.semibold))
-                        .foregroundStyle(.tertiary)
+                NavigationLink(value: w.id) {
+                    WordRow(word: w)
                 }
-                .contentShape(Rectangle())
-                // 가리기 모드: 두 번 탭 → 뜻 보이기/가리기, 한 번 탭 → 상세 화면
-                // 보통 모드: 한 번 탭 → 상세 화면 (두 번 탭을 기다리지 않게)
-                .onTapGesture(count: hideMeanings ? 2 : 1) {
-                    if hideMeanings {
-                        withAnimation(.easeOut(duration: 0.15)) {
-                            if revealed.contains(w.id) { revealed.remove(w.id) } else { revealed.insert(w.id) }
-                        }
-                    } else {
-                        path.append(w.id)
-                    }
-                }
-                .onTapGesture { path.append(w.id) }
             }
             .onDelete { offsets in
                 let list = filtered
@@ -109,7 +68,6 @@ struct WordsView: View {
 
 private struct WordRow: View {
     let word: SavedWord
-    var hideMeaning = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 3) {
@@ -123,7 +81,7 @@ private struct WordRow: View {
                 Text(describeDue(word.dueAt, now: nowMs()))
                     .font(.caption2).foregroundStyle(.secondary)
             }
-            MeaningText(text: word.summary, hidden: hideMeaning)
+            Text(word.summary)
                 .font(.subheadline).lineLimit(1)
             Text(word.sentenceEn)
                 .font(.caption).foregroundStyle(.secondary).lineLimit(1)
@@ -138,10 +96,6 @@ struct WordDetailView: View {
     @Environment(AppModel.self) private var app
     @Environment(\.dismiss) private var dismiss
     @State private var confirmDelete = false
-    @AppStorage("hideMeanings") private var hideMeanings = false
-    @State private var revealed = false
-
-    private var hidden: Bool { hideMeanings && !revealed }
 
     var body: some View {
         if let w = app.vocab.word(id: id) {
@@ -158,33 +112,25 @@ struct WordDetailView: View {
                     }
                     .padding(.vertical, 4)
                 }
-                Section {
+                Section("고른 뜻 \(w.allMeanings.count)개") {
                     ForEach(Array(w.allMeanings.enumerated()), id: \.offset) { i, m in
                         HStack(alignment: .top, spacing: 8) {
                             Text("\(i + 1)").font(.subheadline.bold()).foregroundStyle(.secondary)
                             VStack(alignment: .leading, spacing: 3) {
                                 TagBadges(tags: m.tags)
-                                if m.ko.isEmpty || m.ko == m.gloss {
-                                    MeaningText(text: m.gloss, hidden: hidden && containsHangul(m.gloss))
-                                } else {
-                                    Text(m.gloss)
-                                    MeaningText(text: m.ko, hidden: hidden).foregroundStyle(.blue)
+                                Text(m.gloss)
+                                if !m.ko.isEmpty && m.ko != m.gloss {
+                                    Text(m.ko).foregroundStyle(.blue)
                                 }
                             }
                         }
-                    }
-                } header: {
-                    Text("고른 뜻 \(w.allMeanings.count)개")
-                } footer: {
-                    if hideMeanings {
-                        Text(revealed ? "두 번 탭하면 다시 가려요." : "화면을 두 번 탭하면 한국어 뜻이 보여요.")
                     }
                 }
                 Section("원문 문장") {
                     TappableText(text: w.sentenceEn, highlight: buildHighlightIndex([w.target]))
                         .font(.body)
                     if !w.sentenceKo.isEmpty {
-                        MeaningText(text: w.sentenceKo, hidden: hidden).foregroundStyle(.secondary)
+                        Text(w.sentenceKo).foregroundStyle(.secondary)
                     }
                     if !w.videoId.isEmpty {
                         Button {
@@ -204,10 +150,6 @@ struct WordDetailView: View {
             }
             .navigationTitle(w.surface)
             .navigationBarTitleDisplayMode(.inline)
-            .simultaneousGesture(TapGesture(count: 2).onEnded {
-                guard hideMeanings else { return }
-                withAnimation(.easeOut(duration: 0.15)) { revealed.toggle() }
-            })
             .confirmationDialog("이 단어를 삭제할까요?", isPresented: $confirmDelete, titleVisibility: .visible) {
                 Button("삭제", role: .destructive) {
                     app.vocab.remove(id: id)
@@ -217,28 +159,6 @@ struct WordDetailView: View {
         } else {
             Text("삭제된 단어예요.").foregroundStyle(.secondary)
         }
-    }
-}
-
-/// 뜻 가리기 모드에서 가려지는 글자. 자리는 그대로 두고 흐리게 + 가림막.
-struct MeaningText: View {
-    let text: String
-    let hidden: Bool
-
-    var body: some View {
-        Text(text)
-            .blur(radius: hidden ? 7 : 0)
-            .overlay(alignment: .leading) {
-                if hidden {
-                    Text("두 번 탭해서 뜻 보기")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(.secondary)
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 2)
-                        .background(Color(.tertiarySystemFill), in: Capsule())
-                }
-            }
-            .accessibilityLabel(hidden ? "가려진 뜻" : text)
     }
 }
 

@@ -142,8 +142,14 @@ struct VideoView: View {
                     }
                     .font(.title3.weight(.semibold))
                 }
-                if player.showKo && !cue.ko.isEmpty {
-                    Text(cue.ko).font(.body).foregroundStyle(.blue)
+                if !cue.ko.isEmpty {
+                    if player.showsKo(at: idx) {
+                        Text(cue.ko).font(.body).foregroundStyle(.blue)
+                    } else {
+                        Text("한국어 자막 가림 · 카드나 영상을 두 번 탭하면 보여요")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                    }
                 }
             } else {
                 Text(player.videoId == nil ? "자막의 단어를 탭하면 사전이 열려요" : "자막을 기다리는 중…")
@@ -154,6 +160,8 @@ struct VideoView: View {
         .padding(14)
         .frame(maxWidth: .infinity, minHeight: 96, alignment: .leading)
         .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 14))
+        .contentShape(RoundedRectangle(cornerRadius: 14))
+        .onTapGesture(count: 2) { player.toggleKoReveal() }
         .padding(.horizontal, 12)
     }
 

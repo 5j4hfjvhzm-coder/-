@@ -157,8 +157,9 @@ private struct VideoSubtitleOverlay: View {
         if idx >= 0 && idx < player.cues.count {
             let cue = player.cues[idx]
             let showEn = player.showEn && !cue.en.isEmpty
-            let showKo = player.showKo && !cue.ko.isEmpty
-            if showEn || showKo {
+            let showKo = player.showsKo(at: idx) && !cue.ko.isEmpty
+            let koHidden = !player.showsKo(at: idx) && !cue.ko.isEmpty
+            if showEn || showKo || koHidden {
                 VStack(spacing: 2) {
                     if showEn {
                         TappableText(text: cue.en, highlight: app.vocab.highlight, textColor: .white) { tap, words in
@@ -172,8 +173,12 @@ private struct VideoSubtitleOverlay: View {
                             .font(.system(size: large ? 18 : 13, weight: .medium))
                             .foregroundStyle(Color.yellow)
                             .lineLimit(2)
+                    } else if koHidden {
+                        HiddenKoHint(large: large)
                     }
                 }
+                .contentShape(Rectangle())
+                .onTapGesture(count: 2) { player.toggleKoReveal() }
                 .multilineTextAlignment(.center)
                 .minimumScaleFactor(0.75)
                 .shadow(color: .black, radius: 1)
@@ -186,6 +191,20 @@ private struct VideoSubtitleOverlay: View {
                 .padding(.bottom, safeArea.bottom + (large ? 48 : 36))
             }
         }
+    }
+}
+
+/// 한국어 자막을 가렸을 때 그 자리에 보이는 안내
+struct HiddenKoHint: View {
+    var large = false
+
+    var body: some View {
+        Text("한국어 · 두 번 탭")
+            .font(.system(size: large ? 14 : 11, weight: .semibold))
+            .foregroundStyle(Color.yellow.opacity(0.7))
+            .padding(.horizontal, 8)
+            .padding(.vertical, 2)
+            .overlay(Capsule().strokeBorder(Color.yellow.opacity(0.4), style: StrokeStyle(lineWidth: 1, dash: [3, 2])))
     }
 }
 
