@@ -93,11 +93,23 @@ private struct QuizCard: View {
                     Text("\(index + 1) / \(session.words.count)\(session.practice ? " · 연습" : "")")
                         .font(.caption).foregroundStyle(.secondary)
 
-                    sentence(w)
-                        .font(.title3)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding()
-                        .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 14))
+                    VStack(alignment: .leading, spacing: 12) {
+                        // 빈칸에 들어갈 단어의 뜻 (저장할 때 고른 뜻)
+                        if blank != nil {
+                            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                                Text("뜻").font(.caption.bold()).foregroundStyle(.white)
+                                    .padding(.horizontal, 6).padding(.vertical, 2)
+                                    .background(Color.accentColor, in: Capsule())
+                                Text(w.summary).font(.headline)
+                                TagBadges(tags: w.senseTags)
+                            }
+                        }
+                        sentence(w)
+                            .font(.title3)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding()
+                    .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 14))
 
                     hints(w)
 
