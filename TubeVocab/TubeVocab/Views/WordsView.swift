@@ -11,6 +11,7 @@ struct WordsView: View {
     @Environment(AppModel.self) private var app
     @State private var mode: Mode = .mine
     @State private var query = ""
+    @State private var showSync = false
 
     var body: some View {
         NavigationStack {
@@ -34,6 +35,19 @@ struct WordsView: View {
             .navigationDestination(for: UUID.self) { id in
                 WordDetailView(id: id)
             }
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        showSync = true
+                    } label: {
+                        Image(systemName: app.sync.isConnected
+                              ? (app.sync.error == nil ? "checkmark.icloud" : "exclamationmark.icloud")
+                              : "icloud.slash")
+                    }
+                    .accessibilityLabel("기기 간 동기화")
+                }
+            }
+            .sheet(isPresented: $showSync) { SyncView() }
         }
     }
 

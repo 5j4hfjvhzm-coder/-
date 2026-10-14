@@ -11,7 +11,23 @@
 3. 시뮬레이터나 연결한 iPhone을 고르고 ▶︎(⌘R)로 실행합니다.
 4. 테스트는 **⌘U** 를 누르면 됩니다 (`TubeVocabTests`).
 
-최소 지원 버전은 iOS 17이고, 외부 패키지는 쓰지 않습니다 (SwiftUI, WebKit, SQLite3만 사용).
+### 맥에서 실행
+
+같은 프로젝트로 맥 앱도 만들어져요. Xcode 위쪽 실행 대상에서 고르면 됩니다.
+
+- **My Mac (Mac Catalyst)**: 인텔·애플 실리콘 맥 모두. 맥 앱으로 빌드돼요 (처음 한 번 Signing 에서 Team 을 다시 확인).
+- **My Mac (Designed for iPad)**: 애플 실리콘(M1 이상) 맥에서 아이패드 앱 그대로 실행.
+
+한 번 실행하면 앱이 맥에 설치되어 Launchpad·응용 프로그램에서 다시 열 수 있어요.
+맥에서는 전체화면 버튼을 누르면 화면을 돌리는 대신 창 안을 영상으로 꽉 채워요.
+
+### 아이폰 ↔ 맥 단어장 동기화
+
+단어장 탭 오른쪽 위 ☁︎ 버튼 → **동기화 폴더 고르기**. 아이폰과 맥에서 **같은 iCloud Drive 폴더**를 한 번씩 골라 두면
+그 폴더의 `TubeVocab-words.json` 으로 단어장이 합쳐져요 (저장·삭제·★·시험 기록). 앱을 열어 둔 동안 30초마다, 그리고 단어가 바뀔 때마다 동기화해요.
+앱에 iCloud 기능을 넣지 않은 방식이라 무료 Apple ID 로도 쓸 수 있어요. 두 기기가 같은 Apple ID 로 iCloud Drive 에 로그인되어 있어야 해요.
+
+최소 지원 버전은 iOS 17 / macOS 14 이고, 외부 패키지는 쓰지 않습니다 (SwiftUI, WebKit, SQLite3만 사용).
 
 ## 기능
 
@@ -99,7 +115,7 @@ TubeVocab/
 │   │   ├── Blank.swift         빈칸·보기·정답 판정
 │   │   └── Highlight.swift     저장 단어 하이라이트
 │   ├── Data/                   SQLite 사전, 자막 내려받기
-│   ├── Models/                 플레이어(WKWebView), 단어장, 시험 진행, 앱 상태
+│   ├── Models/                 플레이어(WKWebView), 단어장, 시험 진행, 동기화, 앱 상태
 │   ├── Views/                  화면 (영상, 사전 시트, 단어장, 시험, 하단 탭)
 │   └── Resources/dict.db       내장 사전 (CC BY-SA 4.0)
 ├── TubeVocabTests/             XCTest (자막 정렬, 사전 조회, 빈칸 생성 등)

@@ -12,12 +12,15 @@ final class AppModel {
     let player = PlayerModel()
     let vocab = VocabStore()
     let quiz = QuizModel()
+    /// 아이폰·맥 단어장 동기화 (iCloud Drive 폴더)
+    let sync: SyncService
     let dict: DictStore?
     let dictError: String?
     /// 열려 있는 사전 시트 (영상 위 자막, 아래 자막 카드 어디서 탭해도 같은 시트)
     var wordContext: WordContext?
 
     init() {
+        sync = SyncService(vocab: vocab)
         do {
             dict = try SQLDictStore.bundled()
             dictError = nil

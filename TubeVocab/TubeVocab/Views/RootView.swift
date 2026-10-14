@@ -14,6 +14,7 @@ struct PlayerSlotKey: PreferenceKey {
 /// 플레이어(WKWebView)를 탭 바깥 한 곳에 두고 위치만 바꿔야 탭을 바꿔도 재생이 끊기지 않기 때문.
 struct RootView: View {
     @Environment(AppModel.self) private var app
+    @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
         VStack(spacing: 0) {
@@ -35,6 +36,10 @@ struct RootView: View {
         }
         .statusBarHidden(app.player.isFullscreen)
         .persistentSystemOverlays(app.player.isFullscreen ? .hidden : .automatic)
+        // 앱이 앞에 있는 동안만 다른 기기의 단어장 변경을 확인
+        .onChange(of: scenePhase, initial: true) { _, phase in
+            if phase == .active { app.sync.startPolling() } else { app.sync.stopPolling() }
+        }
     }
 
     /// 탭을 바꿔도 화면을 없애지 않는다 (상태·스크롤 유지)
