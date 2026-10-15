@@ -18,7 +18,20 @@
 - **My Mac (Mac Catalyst)**: 인텔·애플 실리콘 맥 모두. 맥 앱으로 빌드돼요 (처음 한 번 Signing 에서 Team 을 다시 확인).
 - **My Mac (Designed for iPad)**: 애플 실리콘(M1 이상) 맥에서 아이패드 앱 그대로 실행.
 
-한 번 실행하면 앱이 맥에 설치되어 Launchpad·응용 프로그램에서 다시 열 수 있어요.
+#### Xcode 없이 쓰도록 맥에 설치하기
+
+터미널에서 한 줄이면 맥 앱으로 빌드해서 **응용 프로그램 폴더에 설치**해요. 그다음부터는 Xcode 없이 Launchpad·Dock 에서 열면 됩니다.
+
+```bash
+cd TubeVocab
+sh scripts/install_mac_app.sh
+```
+
+"이 맥에서만 실행" 서명이라 무료 Apple ID 의 7일 만료가 없어요. 코드를 바꾸면 같은 명령을 다시 실행하면 업데이트돼요.
+
+Xcode 화면으로 하려면: 실행 대상 **My Mac (Mac Catalyst)** → Signing & Capabilities 의 **Signing Certificate** 를
+"Sign to Run Locally" 로 → ⌘R → **Product ▸ Show Build Folder in Finder** → `Products/Debug-maccatalyst/TubeVocab.app` 을
+응용 프로그램 폴더로 끌어다 놓기.
 맥에서는 전체화면 버튼을 누르면 화면을 돌리는 대신 창 안을 영상으로 꽉 채워요.
 
 ### 아이폰 ↔ 맥 단어장 동기화
@@ -120,6 +133,7 @@ TubeVocab/
 │   └── Resources/dict.db       내장 사전 (CC BY-SA 4.0)
 ├── TubeVocabTests/             XCTest (자막 정렬, 사전 조회, 빈칸 생성 등)
 └── scripts/
+    ├── install_mac_app.sh      맥 앱으로 빌드해서 응용 프로그램 폴더에 설치
     ├── make_free_dict.sh       무료 사전 3개 받아서 dict.db 만들기
     ├── build_dict.py           WordNet / 영한 사전 / kaikki 덤프 → dict.db
     ├── test_build_dict.py
