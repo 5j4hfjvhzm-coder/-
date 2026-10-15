@@ -118,6 +118,14 @@ final class PlayerModel {
         timeMs = ms
     }
 
+    /// 대사 단위로 이동하고 재생: -1 이전 대사, 0 지금 대사 처음부터, +1 다음 대사
+    func jumpLine(_ offset: Int) {
+        guard !cues.isEmpty else { return }
+        let i = max(0, min(cues.count - 1, max(currentIndex, 0) + offset))
+        seek(cues[i].start)
+        play()
+    }
+
     private func js(_ script: String) {
         webView.evaluateJavaScript(script, completionHandler: nil)
     }

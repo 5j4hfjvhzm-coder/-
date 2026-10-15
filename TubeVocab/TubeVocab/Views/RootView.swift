@@ -127,6 +127,18 @@ struct PlayerOverlay: View {
                         .padding(.top, safeArea.top + 12)
                     }
                 }
+                .overlay(alignment: .topTrailing) {
+                    // 전체화면: 대사 단위로 앞뒤 이동 (유튜브 재생 막대와 겹치지 않게 위쪽)
+                    if fullscreen && !player.cues.isEmpty {
+                        HStack(spacing: 10) {
+                            lineButton("backward.end.fill", "이전 대사") { player.jumpLine(-1) }
+                            lineButton("arrow.counterclockwise", "이 대사 다시") { player.jumpLine(0) }
+                            lineButton("forward.end.fill", "다음 대사") { player.jumpLine(1) }
+                        }
+                        .padding(.trailing, safeArea.trailing + 12)
+                        .padding(.top, safeArea.top + 12)
+                    }
+                }
         }
         .frame(width: rect.width, height: rect.height)
         .background(Color.black)
@@ -137,6 +149,17 @@ struct PlayerOverlay: View {
         .allowsHitTesting(!hidden)
         .animation(.easeInOut(duration: 0.22), value: full)
         .animation(.easeInOut(duration: 0.22), value: fullscreen)
+    }
+
+    private func lineButton(_ icon: String, _ label: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: icon)
+                .font(.system(size: 17, weight: .semibold))
+                .foregroundStyle(.white)
+                .frame(width: 40, height: 40)
+                .background(Color.black.opacity(0.55), in: Circle())
+        }
+        .accessibilityLabel(label)
     }
 
     /// 전체화면 → 화면 전체, 영상 탭 → VideoView 의 플레이어 자리, 다른 탭 → 오른쪽 아래 미니
