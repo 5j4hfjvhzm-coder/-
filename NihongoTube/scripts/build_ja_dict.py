@@ -129,6 +129,7 @@ def main():
     ap.add_argument('src')
     ap.add_argument('out')
     ap.add_argument('--shards', type=int, default=96)
+    ap.add_argument('--sqlite', help='iOS 앱용 SQLite 파일도 만든다 (표 e: k 표제어, v 항목 JSON)')
     a = ap.parse_args()
     b = Builder()
     parse_krdict(os.path.join(a.src, 'krdict-kr-jp', 'term_bank_1.json'), b)
@@ -156,6 +157,17 @@ def main():
             else:
                 out.append([e[0], e[1]])
         shards[shard_of(k, a.shards)][k] = out
+    if a.sqlite:
+        import sqlite3
+        if os.path.exists(a.sqlite):
+            os.remove(a.sqlite)
+        con = sqlite3.connect(a.sqlite)
+        con.execute('CREATE TABLE e (k TEXT PRIMARY KEY, v TEXT NOT NULL) WITHOUT ROWID')
+        con.executemany('INSERT INTO e VALUES (?, ?)', ((k, json.dumps(v, ensure_ascii=False, separators=(',', ':')))
+                                                         for s in shards for k, v in s.items()))
+        con.commit()
+        con.execute('VACUUM')
+        con.close()
     os.makedirs(os.path.join(a.out, 'd'), exist_ok=True)
     for i, s in enumerate(shards):
         with open(os.path.join(a.out, 'd', f'{i:02d}.json'), 'w', encoding='utf-8') as f:

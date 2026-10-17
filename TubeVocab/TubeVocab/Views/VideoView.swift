@@ -40,6 +40,7 @@ struct VideoView: View {
                 }
                 .anchorPreference(key: PlayerSlotKey.self, value: .bounds) { $0 }
             toolbar
+            playBar
             currentCard
             transcript
         }
@@ -117,8 +118,8 @@ struct VideoView: View {
                 if player.loading {
                     ProgressView().controlSize(.small)
                 } else {
-                    Text(player.error ?? player.info ?? "")
-                        .foregroundStyle(player.error == nil ? Color.secondary : Color.red)
+                    Text(player.info ?? "")
+                        .foregroundStyle(Color.secondary)
                         .lineLimit(2)
                 }
             }
@@ -128,6 +129,41 @@ struct VideoView: View {
         .controlSize(.small)
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
+    }
+
+    /// 재생 방식 줄: 지금 방식, 막혔을 때 안내, 다른 방식으로 / 유튜브 앱에서 열기
+    @ViewBuilder
+    private var playBar: some View {
+        let player = app.player
+        if player.videoId != nil {
+            VStack(alignment: .leading, spacing: 4) {
+                if let err = player.error {
+                    Text(err).font(.caption).foregroundStyle(.red)
+                } else if let note = player.playInfo {
+                    Text(note).font(.caption).foregroundStyle(.secondary)
+                } else if !player.videoReady {
+                    Text("영상 불러오는 중… 안 뜨면 자동으로 다른 방식으로 열어요").font(.caption).foregroundStyle(.secondary)
+                }
+                HStack(spacing: 8) {
+                    Button {
+                        player.switchMode()
+                    } label: {
+                        Label("다른 방식으로 재생", systemImage: "arrow.triangle.2.circlepath")
+                    }
+                    Button {
+                        player.openInYouTubeApp()
+                    } label: {
+                        Label("유튜브 앱에서 열기", systemImage: "arrow.up.forward.app")
+                    }
+                    Spacer(minLength: 0)
+                    Text(player.mode.label).font(.caption2).foregroundStyle(.secondary)
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+            }
+            .padding(.horizontal, 12)
+            .padding(.bottom, 6)
+        }
     }
 
     private var currentCard: some View {
