@@ -20,6 +20,9 @@ struct QuizView: View {
                         }
                         .padding(.horizontal, 16)
                         .padding(.vertical, 12)
+                        // 아이패드에서 너무 넓게 퍼지지 않게
+                        .frame(maxWidth: 720)
+                        .frame(maxWidth: .infinity)
                     }
                     .scrollDismissesKeyboard(.interactively)
                 } else {

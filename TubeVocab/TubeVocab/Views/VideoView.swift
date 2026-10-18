@@ -25,24 +25,34 @@ struct VideoView: View {
         [UTType(filenameExtension: "srt"), UTType(filenameExtension: "vtt")].compactMap { $0 } + [.plainText, .text, .data]
 
     var body: some View {
-        let player = app.player
-        VStack(spacing: 0) {
-            urlBar
-            // 플레이어(PlayerOverlay)가 이 자리 위에 겹쳐 그려진다
-            Color.black
-                .aspectRatio(16 / 9, contentMode: .fit)
-                .frame(maxWidth: .infinity)
-                .overlay {
-                    if player.videoId == nil {
-                        Text(urlError ? "유튜브 링크를 확인해 주세요" : "영상을 열면 여기서 재생돼요")
-                            .font(.subheadline).foregroundStyle(.gray)
+        GeometryReader { geo in
+            // 아이패드 가로·넓은 맥 창: 왼쪽 영상·자막 카드, 오른쪽 대본
+            if geo.size.width >= 700 && geo.size.width > geo.size.height {
+                HStack(alignment: .top, spacing: 0) {
+                    VStack(spacing: 0) {
+                        urlBar
+                        // 아래 자막 카드가 보이도록 영상 높이를 화면의 절반 남짓으로
+                        playerSlot
+                            .frame(maxHeight: geo.size.height * 0.55)
+                        toolbar
+                        playBar
+                        currentCard
+                        Spacer(minLength: 0)
                     }
+                    .frame(width: geo.size.width * 0.6)
+                    Divider()
+                    transcript
                 }
-                .anchorPreference(key: PlayerSlotKey.self, value: .bounds) { $0 }
-            toolbar
-            playBar
-            currentCard
-            transcript
+            } else {
+                VStack(spacing: 0) {
+                    urlBar
+                    playerSlot
+                    toolbar
+                    playBar
+                    currentCard
+                    transcript
+                }
+            }
         }
         .background(Color(.systemGroupedBackground))
         .sheet(item: Binding(get: { app.wordContext }, set: { app.wordContext = $0 })) { ctx in
@@ -53,6 +63,21 @@ struct VideoView: View {
                 app.player.loadSubtitleFile(fileURL)
             }
         }
+    }
+
+    /// 플레이어(PlayerOverlay)가 이 자리 위에 겹쳐 그려진다
+    private var playerSlot: some View {
+        let player = app.player
+        return Color.black
+            .aspectRatio(16 / 9, contentMode: .fit)
+            .frame(maxWidth: .infinity)
+            .overlay {
+                if player.videoId == nil {
+                    Text(urlError ? "유튜브 링크를 확인해 주세요" : "영상을 열면 여기서 재생돼요")
+                        .font(.subheadline).foregroundStyle(.gray)
+                }
+            }
+            .anchorPreference(key: PlayerSlotKey.self, value: .bounds) { $0 }
     }
 
     private var urlBar: some View {

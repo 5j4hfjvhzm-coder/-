@@ -89,8 +89,9 @@ struct PlayerOverlay: View {
     let container: CGSize
     let safeArea: EdgeInsets
 
-    private let miniW: CGFloat = 208
-    private let miniH: CGFloat = 117
+    /// 아이패드처럼 넓은 화면이면 미니 플레이어도 크게
+    private var miniW: CGFloat { container.width >= 700 ? 352 : 208 }
+    private var miniH: CGFloat { miniW * 9 / 16 }
     private let barH: CGFloat = 30
 
     var body: some View {
@@ -108,7 +109,8 @@ struct PlayerOverlay: View {
             PlayerWebView(webView: player.webView)
                 .overlay(alignment: .bottom) {
                     if fullscreen || (full && player.showOnVideo) {
-                        VideoSubtitleOverlay(large: fullscreen, safeArea: fullscreen ? safeArea : EdgeInsets())
+                        VideoSubtitleOverlay(large: fullscreen, safeArea: fullscreen ? safeArea : EdgeInsets(),
+                                             scale: container.width >= 700 ? 1.35 : 1)
                     }
                 }
                 .overlay(alignment: .topLeading) {
@@ -178,6 +180,8 @@ private struct VideoSubtitleOverlay: View {
     /// 전체화면이면 글자를 크게
     var large = false
     var safeArea = EdgeInsets()
+    /// 아이패드처럼 넓은 화면이면 글자를 더 크게
+    var scale: CGFloat = 1
 
     var body: some View {
         let player = app.player
@@ -193,12 +197,12 @@ private struct VideoSubtitleOverlay: View {
                         TappableText(text: cue.ja, highlight: app.vocab.highlight, textColor: .white) { at in
                             app.openWord(cue: cue, at: at)
                         }
-                        .font(.system(size: large ? 22 : 15, weight: .semibold))
+                        .font(.system(size: (large ? 22 : 15) * scale, weight: .semibold))
                         .lineLimit(3)
                     }
                     if showKo {
                         Text(cue.ko)
-                            .font(.system(size: large ? 18 : 13, weight: .medium))
+                            .font(.system(size: (large ? 18 : 13) * scale, weight: .medium))
                             .foregroundStyle(Color.yellow)
                             .lineLimit(2)
                     } else if koHidden {
