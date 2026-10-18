@@ -14,24 +14,32 @@ struct VideoView: View {
         [UTType(filenameExtension: "srt"), UTType(filenameExtension: "vtt")].compactMap { $0 } + [.plainText, .text, .data]
 
     var body: some View {
-        let player = app.player
-        VStack(spacing: 0) {
-            urlBar
-            // 플레이어(PlayerOverlay)가 이 자리 위에 겹쳐 그려진다
-            Color.black
-                .aspectRatio(16 / 9, contentMode: .fit)
-                .frame(maxWidth: .infinity)
-                .overlay {
-                    if player.videoId == nil {
-                        Text(urlError ? "유튜브 링크를 확인해 주세요" : "일본어 영상 링크를 열면 여기서 재생돼요")
-                            .font(.subheadline).foregroundStyle(.gray)
+        GeometryReader { geo in
+            if Self.isWide(geo.size) {
+                // 아이패드 가로·맥: 왼쪽 영상, 오른쪽 대본
+                HStack(spacing: 0) {
+                    VStack(spacing: 0) {
+                        urlBar
+                        playerSlot
+                        toolbar
+                        playBar
+                        currentCard
+                        Spacer(minLength: 0)
                     }
+                    .frame(width: geo.size.width * 0.58)
+                    Divider()
+                    transcript
                 }
-                .anchorPreference(key: PlayerSlotKey.self, value: .bounds) { $0 }
-            toolbar
-            playBar
-            currentCard
-            transcript
+            } else {
+                VStack(spacing: 0) {
+                    urlBar
+                    playerSlot
+                    toolbar
+                    playBar
+                    currentCard
+                    transcript
+                }
+            }
         }
         .background(Color(.systemGroupedBackground))
         .sheet(item: Binding(get: { app.wordContext }, set: { app.wordContext = $0 })) { ctx in
@@ -42,6 +50,25 @@ struct VideoView: View {
                 app.player.loadSubtitleFile(fileURL)
             }
         }
+    }
+
+    /// 영상과 대본을 나란히 놓을 만큼 넓은 화면인지 (아이패드 가로, 넓은 맥 창)
+    static func isWide(_ size: CGSize) -> Bool {
+        size.width >= 900 && size.width > size.height
+    }
+
+    /// 플레이어(PlayerOverlay)가 이 자리 위에 겹쳐 그려진다
+    private var playerSlot: some View {
+        Color.black
+            .aspectRatio(16 / 9, contentMode: .fit)
+            .frame(maxWidth: .infinity)
+            .overlay {
+                if app.player.videoId == nil {
+                    Text(urlError ? "유튜브 링크를 확인해 주세요" : "일본어 영상 링크를 열면 여기서 재생돼요")
+                        .font(.subheadline).foregroundStyle(.gray)
+                }
+            }
+            .anchorPreference(key: PlayerSlotKey.self, value: .bounds) { $0 }
     }
 
     private var urlBar: some View {

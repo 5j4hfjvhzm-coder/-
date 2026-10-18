@@ -54,3 +54,10 @@ struct Badge: View {
             .background(tone.opacity(0.12), in: RoundedRectangle(cornerRadius: 4))
     }
 }
+
+extension View {
+    /// 아이패드처럼 넓은 화면에서 글줄이 너무 길어지지 않게 가운데로 모은다
+    func readableWidth(_ max: CGFloat = 760) -> some View {
+        frame(maxWidth: max).frame(maxWidth: .infinity)
+    }
+}

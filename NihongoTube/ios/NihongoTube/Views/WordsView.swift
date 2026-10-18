@@ -9,46 +9,70 @@ struct WordsView: View {
     }
 
     @Environment(AppModel.self) private var app
+    @Environment(\.horizontalSizeClass) private var sizeClass
     @State private var mode: Mode = .mine
     @State private var query = ""
     @State private var showSync = false
+    /// 아이패드: 오른쪽에 보이는 단어
+    @State private var selected: UUID?
 
     var body: some View {
-        NavigationStack {
-            VStack(spacing: 0) {
-                Picker("보기", selection: $mode) {
-                    ForEach(Mode.allCases, id: \.self) { m in
-                        Text(m == .mine ? "\(m.rawValue) (\(app.vocab.words.count))" : m.rawValue).tag(m)
+        if sizeClass == .regular {
+            // 아이패드·맥: 왼쪽 목록, 오른쪽 단어 상세
+            NavigationSplitView {
+                list(split: true)
+            } detail: {
+                NavigationStack {
+                    if let id = selected, app.vocab.word(id: id) != nil {
+                        WordDetailView(id: id).id(id)
+                    } else {
+                        ContentUnavailableView("단어를 골라 주세요", systemImage: "book",
+                                               description: Text("왼쪽 목록에서 단어를 고르면 뜻과 원문 문장이 여기에 보여요."))
                     }
                 }
-                .pickerStyle(.segmented)
-                .padding(.horizontal)
-                .padding(.bottom, 8)
-
-                switch mode {
-                case .mine: myWords
-                case .dict: DictSearchView()
-                }
             }
-            .navigationTitle("단어장")
-            .navigationBarTitleDisplayMode(.inline)
-            .navigationDestination(for: UUID.self) { id in
-                WordDetailView(id: id)
-            }
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        showSync = true
-                    } label: {
-                        Image(systemName: app.sync.isConnected
-                              ? (app.sync.error == nil ? "checkmark.icloud" : "exclamationmark.icloud")
-                              : "icloud.slash")
+            .navigationSplitViewStyle(.balanced)
+        } else {
+            NavigationStack {
+                list(split: false)
+                    .navigationDestination(for: UUID.self) { id in
+                        WordDetailView(id: id)
                     }
-                    .accessibilityLabel("기기 간 동기화")
-                }
             }
-            .sheet(isPresented: $showSync) { SyncView() }
         }
+    }
+
+    private func list(split: Bool) -> some View {
+        VStack(spacing: 0) {
+            Picker("보기", selection: $mode) {
+                ForEach(Mode.allCases, id: \.self) { m in
+                    Text(m == .mine ? "\(m.rawValue) (\(app.vocab.words.count))" : m.rawValue).tag(m)
+                }
+            }
+            .pickerStyle(.segmented)
+            .padding(.horizontal)
+            .padding(.bottom, 8)
+
+            switch mode {
+            case .mine: myWords(split: split)
+            case .dict: DictSearchView()
+            }
+        }
+        .navigationTitle("단어장")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    showSync = true
+                } label: {
+                    Image(systemName: app.sync.isConnected
+                          ? (app.sync.error == nil ? "checkmark.icloud" : "exclamationmark.icloud")
+                          : "icloud.slash")
+                }
+                .accessibilityLabel("기기 간 동기화")
+            }
+        }
+        .sheet(isPresented: $showSync) { SyncView() }
     }
 
     private var filtered: [SavedWord] {
@@ -62,8 +86,9 @@ struct WordsView: View {
         }
     }
 
-    private var myWords: some View {
-        List {
+    /// split 이면 고른 단어를 오른쪽에 보여 주고(selection), 아니면 화면을 밀어 넣는다(navigationDestination)
+    private func myWords(split: Bool) -> some View {
+        List(selection: split ? $selected : nil) {
             if app.vocab.words.isEmpty {
                 Text("영상 자막에서 단어를 탭해 저장해 보세요.")
                     .foregroundStyle(.secondary)

@@ -89,9 +89,10 @@ struct PlayerOverlay: View {
     let container: CGSize
     let safeArea: EdgeInsets
 
-    private let miniW: CGFloat = 208
-    private let miniH: CGFloat = 117
     private let barH: CGFloat = 30
+    /// 아이패드처럼 넓은 화면이면 미니 플레이어도 크게
+    private var miniW: CGFloat { container.width >= 700 ? 320 : 208 }
+    private var miniH: CGFloat { miniW * 9 / 16 }
 
     var body: some View {
         let player = app.player
@@ -108,7 +109,7 @@ struct PlayerOverlay: View {
             PlayerWebView(webView: player.webView)
                 .overlay(alignment: .bottom) {
                     if fullscreen || (full && player.showOnVideo) {
-                        VideoSubtitleOverlay(large: fullscreen, safeArea: fullscreen ? safeArea : EdgeInsets())
+                        VideoSubtitleOverlay(large: fullscreen || rect.width >= 600, safeArea: fullscreen ? safeArea : EdgeInsets())
                     }
                 }
                 .overlay(alignment: .topLeading) {

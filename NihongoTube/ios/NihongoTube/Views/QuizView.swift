@@ -20,10 +20,13 @@ struct QuizView: View {
                         }
                         .padding(.horizontal, 16)
                         .padding(.vertical, 12)
+                        .readableWidth()
                     }
                     .scrollDismissesKeyboard(.interactively)
                 } else {
                     QuizHome()
+                        .readableWidth()
+                        .background(Color(.systemGroupedBackground))
                 }
             }
             .navigationTitle("빈칸 시험")
