@@ -90,7 +90,8 @@ private struct EntryCard: View {
                 Text(entry.word).font(.headline)
                 SpeakButton(text: entry.word).font(.subheadline)
                 Badge(label: posKorean[entry.pos] ?? entry.pos, tone: .blue)
-                Badge(label: entry.source == .ko ? "영한" : "영영")
+                Badge(label: entry.source == .naver ? "네이버" : entry.source == .ko ? "영한" : "영영",
+                      tone: entry.source == .naver ? .green : .secondary)
                 if let ipa = entry.ipa {
                     Text(ipa).font(.caption).foregroundStyle(.secondary)
                 }

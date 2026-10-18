@@ -78,6 +78,15 @@ Xcode 화면으로 하려면: 실행 대상 **My Mac (Mac Catalyst)** → Signin
 - 💾 저장하고 나가기 → 시험 첫 화면 "이어서 하기"에서 계속, 끝나면 틀린 문제 다시 풀기 / 처음부터 다시.
 - 사전·단어장·시험 곳곳의 🔊 버튼으로 단어와 문장 발음을 들을 수 있습니다 (iOS 내장 음성).
 
+## 네이버 영어사전
+
+인터넷이 되면 단어를 탭할 때 **네이버 영어사전** 결과를 맨 위에 보여 줘요 (초록 "네이버" 배지). 아래에는 내장 사전 결과가 그대로 있어요.
+- 방식은 [seia-soto/naverDict](https://github.com/seia-soto/naverDict) 와 같아요: 네이버 사전 웹이 쓰는 `dict.naver.com/api3/enko/search` 를 API 키 없이 불러요.
+- 활용형·숙어는 내장 사전이 먼저 기본형으로 바꿔서 물어봐요 (went → go, gave up → give up).
+- 인터넷이 없거나 네이버가 응답하지 않으면 "네이버 사전에 연결하지 못해서 내장 사전으로 보여 줘요"라고 나오고 내장 사전만 보여 줘요.
+- 공식 API가 아니라서 네이버가 주소나 응답 모양을 바꾸면 안 될 수 있어요. 고칠 곳: `Data/NaverDictService.swift`, `Core/NaverDict.swift`.
+- 단어장 탭의 사전 검색도 같은 방식이에요.
+
 ## 사전 (dict.db)
 
 앱에 들어 있는 `TubeVocab/Resources/dict.db`(약 40MB)는 무료 사전 세 개를 합쳐 만든 것입니다.

@@ -22,6 +22,8 @@ enum DictSource: String, Hashable {
     case en
     /// 한국어판(영한)
     case ko
+    /// 네이버 영어사전 (인터넷)
+    case naver
 }
 
 struct Entry: Hashable, Identifiable {
@@ -92,7 +94,7 @@ func rankEntries(_ entries: [Entry], guess: [String], prefer: [String]) -> [Entr
         let wa = wordRank(x.word), wb = wordRank(y.word)
         if wa != wb { return wa < wb }
         // 같은 품사면 한국어판(영한)을 위로
-        if x.source != y.source { return x.source == .ko }
+        if x.source != y.source { return x.source != .en }
         return a.offset < b.offset
     }.map(\.element)
 }

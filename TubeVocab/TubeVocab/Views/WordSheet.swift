@@ -10,6 +10,8 @@ struct WordSheet: View {
     /// 고른 순서대로
     @State private var selected: [DictSelection] = []
     @State private var saved = false
+    /// 네이버 사전 상태 안내 (불러오는 중 / 연결 실패)
+    @State private var naverNote: String?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -21,15 +23,18 @@ struct WordSheet: View {
             }
             Text(ctx.sentenceEn)
                 .font(.footnote).foregroundStyle(.secondary).lineLimit(2)
+            if let naverNote {
+                Text(naverNote).font(.caption).foregroundStyle(.secondary)
+            }
 
             ScrollView {
                 Group {
-                    if let err = app.dictError {
-                        Text(err).foregroundStyle(.red)
-                    } else if let result {
+                    if let result {
                         DictionaryView(result: result, selectedKeys: Set(selected.map(\.key))) { s in
                             toggle(s)
                         }
+                    } else if let err = app.dictError, naverNote == nil {
+                        Text(err).foregroundStyle(.red)
                     } else {
                         ProgressView().frame(maxWidth: .infinity).padding(.top, 24)
                     }
@@ -50,9 +55,30 @@ struct WordSheet: View {
         .presentationDetents([.medium, .large])
         .presentationDragIndicator(.visible)
         .task {
+            // 1) 내장 사전으로 바로 (기본형·숙어 찾기도 여기서)
+            var local = LookupResult.empty
+            local.surface = ctx.words[ctx.tap]
             if let store = app.dict {
-                result = lookupInContext(store, words: ctx.words, tap: ctx.tap)
+                local = lookupInContext(store, words: ctx.words, tap: ctx.tap)
+                result = local
             }
+            // 2) 네이버 사전: 숙어(gave up → give up)와 기본형(went → go)으로 찾아 맨 위에
+            naverNote = "네이버 사전 찾는 중…"
+            let surface = normalizeWord(ctx.words[ctx.tap])
+            let wordQuery = local.lemmas.first { $0 != surface } ?? surface
+            let phraseQueries = Array(local.phrases.prefix(2).map { $0.match.phrase.lowercased() })
+            async let wordHits = NaverDictService.shared.search(wordQuery)
+            var phraseHits: [String: [Entry]] = [:]
+            var failed = false
+            for q in phraseQueries {
+                if let hits = await NaverDictService.shared.search(q) { phraseHits[q] = hits } else { failed = true }
+            }
+            let words = await wordHits
+            if words == nil { failed = true }
+            guard !Task.isCancelled else { return }
+            // 고른 뜻은 그대로 두고 목록만 바꾼다
+            result = mergeNaver(local, word: words ?? [], phrases: phraseHits)
+            naverNote = failed ? "네이버 사전에 연결하지 못해서 내장 사전으로 보여 줘요." : nil
         }
     }
 
@@ -79,7 +105,9 @@ struct WordSheet: View {
     }
 
     private func save() {
-        guard !selected.isEmpty, let store = app.dict else { return }
+        guard !selected.isEmpty else { return }
+        // 내장 사전은 활용형 목록(정답 인정·하이라이트용)에만 쓴다
+        let store = app.dict ?? MemoryDictStore(entries: [], forms: [])
         app.vocab.add(Self.makeWord(store: store, ctx: ctx, selections: selected))
         saved = true
     }
@@ -114,7 +142,7 @@ struct WordSheet: View {
         word.setMeanings(selections.map { s in
             Meaning(
                 gloss: s.sense.gloss,
-                ko: s.entry.source == .ko ? s.sense.gloss : s.sense.ko.joined(separator: ", "),
+                ko: s.entry.source == .en ? s.sense.ko.joined(separator: ", ") : s.sense.gloss,
                 tags: s.sense.tags,
                 pos: s.entry.pos
             )

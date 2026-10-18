@@ -186,6 +186,7 @@ struct DictSearchView: View {
     @State private var query = ""
     @State private var result: LookupResult?
     @State private var suggestions: [String] = []
+    @State private var naverNote: String?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -212,10 +213,13 @@ struct DictSearchView: View {
             }
 
             ScrollView {
-                if let err = app.dictError {
-                    Text(err).foregroundStyle(.red).padding()
-                } else if let result, !query.trimmingCharacters(in: .whitespaces).isEmpty {
+                if let naverNote {
+                    Text(naverNote).font(.caption).foregroundStyle(.secondary).padding(.horizontal)
+                }
+                if let result, !query.trimmingCharacters(in: .whitespaces).isEmpty {
                     DictionaryView(result: result).padding()
+                } else if let err = app.dictError {
+                    Text(err).foregroundStyle(.red).padding()
                 }
                 Text(dictionaryCredits)
                     .font(.caption2)
@@ -226,18 +230,32 @@ struct DictSearchView: View {
         .background(Color(.systemGroupedBackground))
         .task(id: query) {
             // 입력을 잠깐 기다렸다가 찾기
-            try? await Task.sleep(for: .milliseconds(150))
-            guard !Task.isCancelled, let store = app.dict else { return }
+            try? await Task.sleep(for: .milliseconds(300))
+            guard !Task.isCancelled else { return }
             let q = query.trimmingCharacters(in: .whitespaces)
-            result = lookupQuery(store, q)
-            suggestions = q.count >= 2 ? store.searchPrefix(q, limit: 8).filter { $0 != q.lowercased() } : []
+            var local = LookupResult.empty
+            local.surface = q
+            if let store = app.dict {
+                local = lookupQuery(store, q)
+                suggestions = q.count >= 2 ? store.searchPrefix(q, limit: 8).filter { $0 != q.lowercased() } : []
+            }
+            result = local
+            guard !q.isEmpty else { naverNote = nil; return }
+            // 네이버 사전 결과를 맨 위에 (went 처럼 활용형이면 기본형으로)
+            naverNote = "네이버 사전 찾는 중…"
+            let norm = normalizeWord(q)
+            let naverQuery = local.lemmas.first { $0 != norm } ?? norm
+            let hits = await NaverDictService.shared.search(naverQuery)
+            guard !Task.isCancelled else { return }
+            result = mergeNaver(local, word: hits ?? [], phrases: [:])
+            naverNote = hits == nil ? "네이버 사전에 연결하지 못해서 내장 사전으로 보여 줘요." : nil
         }
     }
 }
 
 /// 내장 사전 출처 (CC BY-SA 4.0 저작자 표시)
 let dictionaryCredits = """
-사전 출처: WordNet 3.0 (Princeton University) · open-english-korean-dict \
+사전 출처: 네이버 영어사전(인터넷 연결 시, dict.naver.com) · WordNet 3.0 (Princeton University) · open-english-korean-dict \
 (jhseo1211, CC BY-SA 4.0) · kengdic (Joe Speigle, MPL 2.0). \
 내장 사전 파일(dict.db)은 CC BY-SA 4.0 으로 배포됩니다.
 """
