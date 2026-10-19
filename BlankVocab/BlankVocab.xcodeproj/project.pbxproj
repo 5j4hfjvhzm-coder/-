@@ -6,9 +6,48 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		A1000000000000000000001A /* BlankVocabKeyboard.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = A10000000000000000000010 /* BlankVocabKeyboard.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		A1000000000000000000001C /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = A10000000000000000000009 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = A10000000000000000000015;
+			remoteInfo = BlankVocabKeyboard;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		A1000000000000000000001B /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				A1000000000000000000001A /* BlankVocabKeyboard.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
 /* Begin PBXFileReference section */
 		A10000000000000000000001 /* BlankVocab.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = BlankVocab.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		A10000000000000000000010 /* BlankVocabKeyboard.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = BlankVocabKeyboard.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		A10000000000000000000019 /* Exceptions for "BlankVocabKeyboard" folder in "BlankVocabKeyboard" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = A10000000000000000000015 /* BlankVocabKeyboard */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		A10000000000000000000002 /* BlankVocab */ = {
@@ -16,10 +55,25 @@
 			path = BlankVocab;
 			sourceTree = "<group>";
 		};
+		A10000000000000000000011 /* BlankVocabKeyboard */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				A10000000000000000000019 /* Exceptions for "BlankVocabKeyboard" folder in "BlankVocabKeyboard" target */,
+			);
+			path = BlankVocabKeyboard;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
 		A10000000000000000000003 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A10000000000000000000012 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -33,6 +87,7 @@
 			isa = PBXGroup;
 			children = (
 				A10000000000000000000002 /* BlankVocab */,
+				A10000000000000000000011 /* BlankVocabKeyboard */,
 				A10000000000000000000005 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -41,6 +96,7 @@
 			isa = PBXGroup;
 			children = (
 				A10000000000000000000001 /* BlankVocab.app */,
+				A10000000000000000000010 /* BlankVocabKeyboard.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -55,10 +111,12 @@
 				A10000000000000000000007 /* Sources */,
 				A10000000000000000000003 /* Frameworks */,
 				A10000000000000000000008 /* Resources */,
+				A1000000000000000000001B /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				A1000000000000000000001D /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				A10000000000000000000002 /* BlankVocab */,
@@ -69,6 +127,28 @@
 			productName = BlankVocab;
 			productReference = A10000000000000000000001 /* BlankVocab.app */;
 			productType = "com.apple.product-type.application";
+		};
+		A10000000000000000000015 /* BlankVocabKeyboard */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A10000000000000000000016 /* Build configuration list for PBXNativeTarget "BlankVocabKeyboard" */;
+			buildPhases = (
+				A10000000000000000000013 /* Sources */,
+				A10000000000000000000012 /* Frameworks */,
+				A10000000000000000000014 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				A10000000000000000000011 /* BlankVocabKeyboard */,
+			);
+			name = BlankVocabKeyboard;
+			packageProductDependencies = (
+			);
+			productName = BlankVocabKeyboard;
+			productReference = A10000000000000000000010 /* BlankVocabKeyboard.appex */;
+			productType = "com.apple.product-type.app-extension";
 		};
 /* End PBXNativeTarget section */
 
@@ -81,6 +161,9 @@
 				LastUpgradeCheck = 1600;
 				TargetAttributes = {
 					A10000000000000000000006 = {
+						CreatedOnToolsVersion = 16.0;
+					};
+					A10000000000000000000015 = {
 						CreatedOnToolsVersion = 16.0;
 					};
 				};
@@ -101,12 +184,20 @@
 			projectRoot = "";
 			targets = (
 				A10000000000000000000006 /* BlankVocab */,
+				A10000000000000000000015 /* BlankVocabKeyboard */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
 		A10000000000000000000008 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A10000000000000000000014 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -123,7 +214,22 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		A10000000000000000000013 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		A1000000000000000000001D /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = A10000000000000000000015 /* BlankVocabKeyboard */;
+			targetProxy = A1000000000000000000001C /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		A1000000000000000000000C /* Debug */ = {
@@ -245,6 +351,58 @@
 			};
 			name = Release;
 		};
+		A10000000000000000000017 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = BlankVocabKeyboard/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "빈칸 단어장 키보드";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.example.BlankVocab.Keyboard;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		A10000000000000000000018 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = BlankVocabKeyboard/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "빈칸 단어장 키보드";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.example.BlankVocab.Keyboard;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -262,6 +420,15 @@
 			buildConfigurations = (
 				A1000000000000000000000E /* Debug */,
 				A1000000000000000000000F /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		A10000000000000000000016 /* Build configuration list for PBXNativeTarget "BlankVocabKeyboard" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A10000000000000000000017 /* Debug */,
+				A10000000000000000000018 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
