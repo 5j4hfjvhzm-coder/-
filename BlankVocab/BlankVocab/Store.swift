@@ -195,6 +195,16 @@ final class Store {
         if data.auto { Speech.shared.say(Blank(x).fullSentence) }
     }
 
+    /// "정답 보기": 답을 모를 때 정답과 단어 정보를 바로 보여줘요. 틀린 문제로 기록돼요.
+    func reveal() {
+        guard var q = quiz, q.done == nil, let x = q.current else { return }
+        q.wrong.append(x)
+        q.done = Quiz.Done(ok: false, val: "", revealed: true)
+        q.explanation = ""
+        quiz = q
+        if data.auto { Speech.shared.say(Blank(x).fullSentence) }
+    }
+
     func next() {
         guard var q = quiz else { return }
         q.explanation = ""
@@ -279,7 +289,7 @@ final class Store {
         문장: \(b.pre)____\(b.post)
         뜻: \(x.m)
         정답: \(b.ans)
-        학생의 답: \(done.val)
+        학생의 답: \(done.revealed ? "(답을 몰라서 정답 보기를 눌렀어요)" : done.val)
         다음 순서로 쓰세요: 1) 왜 틀렸는지(철자, 시제, 단수/복수, 뜻 혼동 등) 2) 올바르게 완성한 문장 3) 같은 실수를 피하는 짧은 팁
         """
         let stillHere = { [weak self] in self?.quiz?.sid == sid && self?.quiz?.i == idx }

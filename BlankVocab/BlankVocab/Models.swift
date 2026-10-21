@@ -1,13 +1,33 @@
 import Foundation
 
 /// 단어 하나. 웹 버전 백업(.json)과 같은 키(w, m, e, p, star, id)를 사용해 서로 호환돼요.
+/// CSV의 나머지 열(성별, 발음, 파생어, 유의어, 동의어, 반의어, 설명, 날짜, 이미지)도 함께 저장해요.
 struct Word: Codable, Identifiable, Hashable {
     var id: String
     var w: String
     var m: String
     var e: String
+    /// 품사(POS)
     var p: String
     var star: Bool
+    /// 성별(G)
+    var g: String = ""
+    /// 발음(P)
+    var pron: String = ""
+    /// 파생어(DER)
+    var der: String = ""
+    /// 유의어(SIM)
+    var sim: String = ""
+    /// 동의어(S)
+    var syn: String = ""
+    /// 반의어(A)
+    var ant: String = ""
+    /// 설명(D)
+    var d: String = ""
+    /// 날짜(C)
+    var c: String = ""
+    /// 이미지(I) — 주소(URL)나 파일 이름
+    var img: String = ""
 
     init(w: String, m: String, e: String = "", p: String = "", star: Bool = false, id: String = Word.newID()) {
         self.id = id
@@ -22,17 +42,47 @@ struct Word: Codable, Identifiable, Hashable {
         String(UUID().uuidString.replacingOccurrences(of: "-", with: "").prefix(10)).lowercased()
     }
 
-    enum CodingKeys: String, CodingKey { case id, w, m, e, p, star }
+    /// 정답을 확인한 뒤에 보여줄 추가 정보 (값이 있는 것만, CSV 열 순서대로)
+    var details: [WordDetail] {
+        [WordDetail(label: "품사", value: p), WordDetail(label: "발음", value: pron), WordDetail(label: "성별", value: g),
+         WordDetail(label: "설명", value: d), WordDetail(label: "파생어", value: der), WordDetail(label: "유의어", value: sim),
+         WordDetail(label: "동의어", value: syn), WordDetail(label: "반의어", value: ant)]
+            .filter { !$0.value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+    }
+
+    var imageURL: URL? {
+        let s = img.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard s.lowercased().hasPrefix("http://") || s.lowercased().hasPrefix("https://") else { return nil }
+        return URL(string: s)
+    }
+
+    enum CodingKeys: String, CodingKey { case id, w, m, e, p, star, g, pron, der, sim, syn, ant, d, c, img }
 
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
+        func str(_ k: CodingKeys) -> String { (try? c.decodeIfPresent(String.self, forKey: k)) ?? "" }
         id = (try? c.decodeIfPresent(String.self, forKey: .id)) ?? Word.newID()
-        w = (try? c.decodeIfPresent(String.self, forKey: .w)) ?? ""
-        m = (try? c.decodeIfPresent(String.self, forKey: .m)) ?? ""
-        e = (try? c.decodeIfPresent(String.self, forKey: .e)) ?? ""
-        p = (try? c.decodeIfPresent(String.self, forKey: .p)) ?? ""
+        w = str(.w)
+        m = str(.m)
+        e = str(.e)
+        p = str(.p)
         star = (try? c.decodeIfPresent(Bool.self, forKey: .star)) ?? false
+        g = str(.g)
+        pron = str(.pron)
+        der = str(.der)
+        sim = str(.sim)
+        syn = str(.syn)
+        ant = str(.ant)
+        d = str(.d)
+        self.c = str(.c)
+        img = str(.img)
     }
+}
+
+struct WordDetail: Identifiable, Hashable {
+    var label: String
+    var value: String
+    var id: String { label }
 }
 
 struct Book: Codable, Identifiable, Hashable {
@@ -119,6 +169,8 @@ struct Quiz {
     struct Done {
         var ok: Bool
         var val: String
+        /// "정답 보기"로 답을 먼저 본 경우
+        var revealed = false
     }
 
     var list: [Word]

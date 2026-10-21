@@ -51,10 +51,8 @@ struct QuizView: View {
                 .padding(.vertical, 2)
                 .background(Theme.soft, in: UnevenRoundedRectangle(topLeadingRadius: 10, topTrailingRadius: 10))
             VStack(alignment: .leading, spacing: 10) {
-                HStack(alignment: .firstTextBaseline, spacing: 6) {
-                    Text(x.m).font(.title3.weight(.heavy)).foregroundStyle(Theme.ok)
-                    if !x.p.isEmpty { Text("(\(x.p))").font(.footnote).foregroundStyle(Theme.sub) }
-                }
+                // 문제를 풀기 전에는 뜻만 보여줘요. 품사 등은 정답 확인 후 아래에 나와요.
+                Text(x.m).font(.title3.weight(.heavy)).foregroundStyle(Theme.ok)
                 sentence(b, done: done)
                     .font(.system(size: 22))
                     .lineSpacing(8)
@@ -79,6 +77,11 @@ struct QuizView: View {
         if let done, !done.ok {
             Text("정답은 **\(b.ans)** 이에요.")
                 .hintBox()
+        }
+        if done != nil {
+            WordDetailCard(word: x)
+        }
+        if let done, !done.ok {
             Button("🤖 AI로 틀린 이유 설명") { Task { await store.explainWrong() } }
                 .buttonStyle(.pill)
                 .disabled(q.explaining)
@@ -100,6 +103,13 @@ struct QuizView: View {
             Button("힌트 보기") { store.showHint() }
                 .buttonStyle(.pill)
                 .disabled(q.hint || done != nil || q.isTest)
+            if done == nil {
+                Button("정답 보기") {
+                    answer = ""
+                    store.reveal()
+                }
+                .buttonStyle(.pill)
+            }
             Button {
                 store.toggleStar(wordID: x.id)
             } label: {
@@ -193,6 +203,52 @@ private struct ResultView: View {
                     .buttonStyle(.pill)
             }
             .padding(.top, 6)
+        }
+    }
+}
+
+/// 정답 확인 후 보여주는 단어 정보: 품사, 발음, 성별, 설명, 파생어, 유의어, 동의어, 반의어, 이미지
+private struct WordDetailCard: View {
+    let word: Word
+
+    var body: some View {
+        let details = word.details
+        if !details.isEmpty || word.imageURL != nil {
+            VStack(alignment: .leading, spacing: 10) {
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    Text(word.w).font(.headline)
+                    Text(word.m).font(.subheadline).foregroundStyle(Theme.sub)
+                }
+                ForEach(details) { item in
+                    HStack(alignment: .firstTextBaseline, spacing: 10) {
+                        Text(item.label)
+                            .font(.caption.weight(.heavy))
+                            .foregroundStyle(Theme.pri)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 3)
+                            .background(Theme.soft, in: Capsule())
+                            .frame(width: 64, alignment: .leading)
+                        Text(item.value)
+                            .font(.subheadline)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .textSelection(.enabled)
+                    }
+                }
+                if let url = word.imageURL {
+                    AsyncImage(url: url) { phase in
+                        if let image = phase.image {
+                            image.resizable().scaledToFit()
+                        } else if phase.error != nil {
+                            Text("이미지를 불러오지 못했어요.").font(.footnote).foregroundStyle(Theme.sub)
+                        } else {
+                            ProgressView()
+                        }
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: 220)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                }
+            }
+            .card()
         }
     }
 }
