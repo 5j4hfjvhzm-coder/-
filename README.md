@@ -6,7 +6,7 @@
 
 1. Mac에서 **Xcode 16 이상**으로 `BlankVocab/BlankVocab.xcodeproj` 를 엽니다.
 2. 왼쪽에서 `BlankVocab` 프로젝트 → **Signing & Capabilities** → **Team** 에 본인 Apple ID 팀을 선택합니다.
-   (필요하면 Bundle Identifier `com.example.BlankVocab` 를 고유한 값으로 바꾸세요.)
+   (필요하면 Bundle Identifier `com.siwoo.BlankVocab` 를 고유한 값으로 바꾸세요.)
 3. 상단에서 시뮬레이터나 연결한 iPhone을 고르고 ▶︎ (⌘R) 로 실행합니다.
 
 최소 지원 버전: iOS 17
