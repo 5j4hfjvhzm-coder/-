@@ -60,6 +60,7 @@ private struct APIKeySection: View {
     @State private var saved = false
     @State private var model = AI.geminiModel
     @State private var testing = false
+    @State private var result: (ok: Bool, text: String)?
 
     var body: some View {
         Section {
@@ -86,11 +87,18 @@ private struct APIKeySection: View {
                         key = ""
                         setKey(nil)
                         saved = false
+                        result = nil
                         store.show("\(provider.name) API 키를 지웠어요.")
                     }
                 }
             }
             .buttonStyle(.borderless)
+            if let result {
+                Text(result.text)
+                    .font(.footnote)
+                    .foregroundStyle(result.ok ? Theme.ok : Theme.bad)
+                    .textSelection(.enabled)
+            }
         } header: {
             Text("\(provider.name) API 키")
         } footer: {
@@ -126,6 +134,7 @@ private struct APIKeySection: View {
         }
         setKey(k)
         key = k
+        result = nil
         saved = !k.isEmpty
         guard saved else {
             store.show("\(provider.name) API 키를 지웠어요.")
@@ -145,12 +154,14 @@ private struct APIKeySection: View {
         if provider == .gemini { AI.geminiModel = model }
         guard let client = AI.client(for: provider) else { return }
         testing = true
+        result = nil
         defer { testing = false }
         do {
             _ = try await client.stream(messages: [AIMessage(role: .user, text: "Reply with just: OK")]) { _ in }
-            store.show("\(provider.name)에 연결됐어요. ✅")
+            if provider == .gemini { model = AI.geminiModel }
+            result = (true, "연결됐어요. ✅" + (provider == .gemini ? " (모델: \(AI.geminiModel))" : ""))
         } catch {
-            store.show(AI.describe(error))
+            result = (false, AI.describe(error))
         }
     }
 }
