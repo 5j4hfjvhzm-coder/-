@@ -6,7 +6,7 @@
 
 1. Mac에서 **Xcode 16 이상**으로 `BlankVocab/BlankVocab.xcodeproj` 를 엽니다.
 2. 왼쪽에서 `BlankVocab` 프로젝트 → **Signing & Capabilities** → **Team** 에 본인 Apple ID 팀을 선택합니다.
-   (필요하면 Bundle Identifier `com.siwoo.BlankVocab` 를 고유한 값으로 바꾸세요.)
+   (필요하면 Bundle Identifier `com.siwoolee.blankvocab1021` 를 고유한 값으로 바꾸세요.)
 3. 상단에서 시뮬레이터나 연결한 iPhone을 고르고 ▶︎ (⌘R) 로 실행합니다.
 
 최소 지원 버전: iOS 17
@@ -41,12 +41,20 @@ Bundle Identifier를 바꿨다면 키보드 쪽도 `<앱 번들 ID>.Keyboard` �
 
 ## AI 기능 설정
 
-웹 아티팩트에서는 claude.ai 계정으로 AI를 썼지만, 앱에서는 **Claude API 키**가 필요해요.
+웹 아티팩트에서는 claude.ai 계정으로 AI를 썼지만, 앱에서는 **Claude** 또는 **Gemini** API 키가 필요해요. 둘 중 하나만 있어도 돼요.
 
-1. [console.anthropic.com](https://console.anthropic.com)에서 API 키를 발급받습니다.
-2. 앱 첫 화면 오른쪽 위 ⚙︎ → **Claude API 키**에 붙여 넣고 저장합니다. (키는 기기 키체인에만 저장)
+| AI | 발급 | 키 모양 |
+|---|---|---|
+| Claude | [console.anthropic.com](https://console.anthropic.com) | `sk-ant-...` |
+| Gemini | [aistudio.google.com](https://aistudio.google.com) → Get API key | `AQ....` (예전 키는 `AIza...`) |
 
-사용량만큼 Anthropic 계정에 요금이 청구됩니다. AI를 쓰지 않으면 키 없이도 나머지 기능은 모두 동작해요.
+`gen-lang-client-...`는 AI Studio가 만든 **프로젝트 이름**이지 키가 아니에요.
+
+1. 앱 첫 화면 오른쪽 위 ⚙︎ → **AI 선택**에서 Claude / Gemini를 고릅니다.
+2. 그 AI의 키 칸에 붙여 넣고 **저장** → **연결 테스트**로 확인합니다. (키는 기기 키체인에만 저장)
+3. Gemini 모델은 기본값 `gemini-flash-latest`(항상 최신 Flash)이고, 설정에서 바꿀 수 있어요.
+
+사용량만큼 각 회사 계정에 요금이 청구됩니다(Gemini는 무료 한도 안에서는 무료). AI를 쓰지 않으면 키 없이도 나머지 기능은 모두 동작해요.
 
 ## 웹 버전에서 단어 옮기기
 
@@ -64,6 +72,7 @@ BlankVocab/
     ├── Store.swift           저장, 가져오기, 퀴즈 진행 로직
     ├── Blank.swift           예문에서 빈칸 만들기
     ├── CSV.swift             CSV 읽기/쓰기
+    ├── AI.swift              AI 선택 + Gemini API (스트리밍)
     ├── ClaudeClient.swift    Claude API (스트리밍)
     ├── Keychain.swift        API 키 저장
     ├── Speech.swift          영어 읽기 (TTS)

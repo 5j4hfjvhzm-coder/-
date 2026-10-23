@@ -85,13 +85,13 @@ struct ChatView: View {
     private func send() {
         let t = input.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !t.isEmpty, !busy else { return }
-        guard let client = ClaudeClient.fromSettings() else {
-            store.show("AI 기능을 쓰려면 설정에서 Claude API 키를 입력하세요.")
+        guard let client = AI.current() else {
+            store.show(AI.missingKeyMessage)
             return
         }
         input = ""
         // 실패한 답변(오류 메시지)은 빼고, 사용자 메시지 바로 뒤에 온 AI 답변만 대화 기록으로 보내요.
-        var history: [ClaudeClient.Message] = []
+        var history: [AIMessage] = []
         for m in msgs where !m.text.isEmpty && !(m.role == .assistant && failed.contains(m.id)) {
             if m.role == .assistant && history.last?.role != .user { continue }
             if m.role == .user && history.last?.role == .user { history.removeLast() }

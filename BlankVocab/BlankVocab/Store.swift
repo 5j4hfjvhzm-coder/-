@@ -275,8 +275,8 @@ final class Store {
 
     func explainWrong() async {
         guard var q = quiz, let x = q.current, let done = q.done else { return }
-        guard let client = ClaudeClient.fromSettings() else {
-            quiz?.explanation = "AI 기능을 쓰려면 첫 화면 오른쪽 위 ⚙︎ 설정에서 Claude API 키를 입력하세요."
+        guard let client = AI.current() else {
+            quiz?.explanation = AI.missingKeyMessage
             return
         }
         let b = Blank(x)

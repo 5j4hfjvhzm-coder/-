@@ -2,11 +2,8 @@ import Foundation
 
 /// Claude Messages API를 스트리밍(SSE)으로 호출하는 작은 클라이언트.
 /// Swift용 공식 SDK가 없어서 URLSession으로 직접 호출해요.
-struct ClaudeClient {
-    struct Message {
-        var role: ChatMessage.Role
-        var text: String
-    }
+struct ClaudeClient: AIClient {
+    typealias Message = AIMessage
 
     enum APIError: LocalizedError {
         case http(Int, String)
@@ -15,7 +12,7 @@ struct ClaudeClient {
 
         var errorDescription: String? {
             switch self {
-            case .http(401, _): return "API 키가 올바르지 않아요. 설정에서 확인하세요."
+            case .http(401, _): return "Claude API 키가 올바르지 않아요. 설정에서 확인하세요."
             case .http(429, _): return "요청이 많아요. 잠시 후 다시 시도하세요."
             case .http(let code, let msg): return "AI 응답에 실패했어요. (\(code)) \(msg)"
             case .refusal: return "AI가 이 요청에 답할 수 없어요."
@@ -29,15 +26,7 @@ struct ClaudeClient {
 
     let apiKey: String
 
-    /// 설정에 저장된 키로 클라이언트를 만들어요. 키가 없으면 nil.
-    static func fromSettings() -> ClaudeClient? {
-        guard let key = Keychain.apiKey, !key.isEmpty else { return nil }
-        return ClaudeClient(apiKey: key)
-    }
-
-    /// 답변을 스트리밍으로 받아 onText에 지금까지의 전체 텍스트를 넘겨요. 최종 텍스트를 반환해요.
-    @MainActor
-    func stream(system: String? = nil, messages: [Message], onText: @escaping @MainActor (String) -> Void) async throws -> String {
+    func stream(system: String? = nil, messages: [AIMessage], onText: @escaping @MainActor (String) -> Void) async throws -> String {
         var req = URLRequest(url: Self.endpoint)
         req.httpMethod = "POST"
         req.timeoutInterval = 120
