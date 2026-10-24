@@ -7,8 +7,8 @@ struct AIMessage {
 }
 
 /// 답변을 스트리밍으로 받아 onText에 지금까지의 전체 텍스트를 넘기고, 최종 텍스트를 반환해요.
-@MainActor
-protocol AIClient {
+/// 네트워크 작업이라 메인 스레드에 묶지 않아요. onText만 화면(메인)에서 실행돼요.
+protocol AIClient: Sendable {
     func stream(system: String?, messages: [AIMessage], onText: @escaping @MainActor (String) -> Void) async throws -> String
 }
 
@@ -115,7 +115,7 @@ struct GeminiClient: AIClient {
 
     private static let base = "https://generativelanguage.googleapis.com/v1beta/"
 
-    nonisolated init(apiKey: String, model: String) {
+    init(apiKey: String, model: String) {
         // 복사할 때 섞여 들어간 공백·줄바꿈을 지워요.
         self.apiKey = apiKey.filter { !$0.isWhitespace && !$0.isNewline }
         self.model = model
@@ -178,7 +178,7 @@ struct GeminiClient: AIClient {
                 for p in parts where p["thought"] as? Bool != true {
                     if let t = p["text"] as? String, !t.isEmpty {
                         text += t
-                        onText(text)
+                        await onText(text)
                     }
                 }
             }

@@ -69,7 +69,7 @@ struct ClaudeClient: AIClient {
                    delta["type"] as? String == "text_delta",
                    let t = delta["text"] as? String {
                     text += t
-                    onText(text)
+                    await onText(text)
                 }
             case "message_delta":
                 if let delta = obj["delta"] as? [String: Any], delta["stop_reason"] as? String == "refusal" {
