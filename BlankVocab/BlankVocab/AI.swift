@@ -115,7 +115,7 @@ struct GeminiClient: AIClient {
 
     private static let base = "https://generativelanguage.googleapis.com/v1beta/"
 
-    init(apiKey: String, model: String) {
+    nonisolated init(apiKey: String, model: String) {
         // 복사할 때 섞여 들어간 공백·줄바꿈을 지워요.
         self.apiKey = apiKey.filter { !$0.isWhitespace && !$0.isNewline }
         self.model = model
