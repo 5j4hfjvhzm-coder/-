@@ -87,3 +87,9 @@ BlankVocab/
     ├── HangulComposer.swift  두벌식 한글 조합
     └── NaverDict.swift       네이버 사전 검색
 ```
+
+---
+
+# 에딧 메이커 (macOS)
+
+After Effects로 K-pop edit 영상을 자동으로 만드는 맥 앱은 [`EditMaker/`](EditMaker/README.md) 폴더에 있어요.
