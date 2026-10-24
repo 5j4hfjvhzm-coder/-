@@ -45,6 +45,9 @@ struct BookView: View {
                     Button("★ 헷갈리는 단어 (\(stars))") { store.start(.star, ids: [b.id], multi: false) }
                         .buttonStyle(.pill)
                         .disabled(stars == 0)
+                    NavigationLink(value: Route.flash([b.id])) { Text("🃏 플래시카드") }
+                        .buttonStyle(.pill)
+                        .disabled(b.words.isEmpty)
                     NavigationLink(value: Route.chat([b.id])) { Text("🤖 AI 프리토킹") }
                         .buttonStyle(.pill)
                 }

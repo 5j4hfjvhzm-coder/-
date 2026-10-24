@@ -4,6 +4,7 @@ import UniformTypeIdentifiers
 enum Route: Hashable {
     case book(Int)
     case chat([Int])
+    case flash([Int])
     case settings
 }
 
@@ -51,6 +52,7 @@ struct HomeView: View {
                 switch r {
                 case .book(let id): BookView(bookID: id)
                 case .chat(let ids): ChatView(bookIDs: ids)
+                case .flash(let ids): FlashcardView(bookIDs: ids)
                 case .settings: SettingsView()
                 }
             }
@@ -161,6 +163,9 @@ struct HomeView: View {
                     Button("모든 단어장 테스트 (\(store.count(allIDs))단어)") { store.start(.test, ids: allIDs, multi: true) }
                         .buttonStyle(.pill)
                         .disabled(store.count(allIDs) == 0)
+                    Button("🃏 플래시카드") { path.append(.flash(pool)) }
+                        .buttonStyle(.pill)
+                        .disabled(store.words(in: pool).isEmpty)
                     Button("🤖 AI 프리토킹") { path.append(.chat(pool)) }
                         .buttonStyle(.pill)
                     Button("★ 헷갈리는 단어만 (\(store.starCount(pool)))") { store.start(.star, ids: pool, multi: true) }

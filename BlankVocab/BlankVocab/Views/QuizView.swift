@@ -208,16 +208,19 @@ private struct ResultView: View {
 }
 
 /// 정답 확인 후 보여주는 단어 정보: 품사, 발음, 성별, 설명, 파생어, 유의어, 동의어, 반의어, 이미지
-private struct WordDetailCard: View {
+struct WordDetailCard: View {
     let word: Word
+    var showHeader = true
 
     var body: some View {
         let details = word.details
         if !details.isEmpty || word.imageURL != nil {
             VStack(alignment: .leading, spacing: 10) {
-                HStack(alignment: .firstTextBaseline, spacing: 8) {
-                    Text(word.w).font(.headline)
-                    Text(word.m).font(.subheadline).foregroundStyle(Theme.sub)
+                if showHeader {
+                    HStack(alignment: .firstTextBaseline, spacing: 8) {
+                        Text(word.w).font(.headline)
+                        Text(word.m).font(.subheadline).foregroundStyle(Theme.sub)
+                    }
                 }
                 ForEach(details) { item in
                     HStack(alignment: .firstTextBaseline, spacing: 10) {
