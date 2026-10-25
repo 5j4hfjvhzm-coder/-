@@ -21,6 +21,8 @@ struct DeckView: View {
     @State private var filter: DeckFilter = .all
     @State private var search = ""
     @State private var confirmClear = false
+    /// 섞었을 때 단어 id → 순서. nil이면 원래 순서
+    @State private var shuffleRank: [String: Int]?
 
     private struct Line: Identifiable {
         let n: Int
@@ -43,7 +45,20 @@ struct DeckView: View {
             if !q.isEmpty && !e.w.lowercased().contains(q) && !e.m.lowercased().contains(q) { continue }
             out.append(Line(n: i + 1, entry: e))
         }
+        if let rank = shuffleRank {
+            // 섞은 순서로 놓고 번호도 1부터 다시 매겨요
+            out = out.sorted { (rank[$0.id] ?? Int.max) < (rank[$1.id] ?? Int.max) }
+                .enumerated()
+                .map { Line(n: $0.offset + 1, entry: $0.element.entry) }
+        }
         return out
+    }
+
+    private func shuffle() {
+        guard let deck else { return }
+        var rank: [String: Int] = [:]
+        for (i, e) in deck.entries.shuffled().enumerated() { rank[e.id] = i }
+        shuffleRank = rank
     }
 
     private var hiding: Bool { hideWord || hideMeaning }
@@ -92,6 +107,17 @@ struct DeckView: View {
             pill("단어 가리기", icon: hideWord ? "eye.slash.fill" : "eye.slash", on: hideWord) { hideWord.toggle() }
             pill("뜻 가리기", icon: hideMeaning ? "eye.slash.fill" : "eye.slash", on: hideMeaning) { hideMeaning.toggle() }
             pill("형광펜", icon: "highlighter", on: markerMode) { markerMode.toggle() }
+            pill("섞기", icon: "shuffle", on: shuffleRank != nil) {
+                if shuffleRank == nil { shuffle() } else { shuffleRank = nil }
+            }
+            if shuffleRank != nil {
+                Button {
+                    shuffle()
+                } label: {
+                    Label("다시 섞기", systemImage: "arrow.triangle.2.circlepath")
+                        .font(.system(size: 15, weight: .semibold))
+                }
+            }
 
             if hiding && !revealed.isEmpty {
                 Button {
