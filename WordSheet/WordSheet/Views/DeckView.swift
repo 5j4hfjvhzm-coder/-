@@ -225,11 +225,25 @@ struct DeckView: View {
                 .padding(.top, fontSize * 0.2)
 
             VStack(alignment: .leading, spacing: 6) {
-                Text(e.w)
-                    .font(.system(size: fontSize, weight: .bold))
-                    .highlighted(e.marker)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .covered(wordHidden)
+                HStack(alignment: .center, spacing: 8) {
+                    Text(e.w)
+                        .font(.system(size: fontSize, weight: .bold))
+                        .highlighted(e.marker)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .covered(wordHidden)
+                    // 단어를 가려도 소리는 들을 수 있어요 (듣고 맞히기)
+                    Button {
+                        if let deck { Speech.shared.say(e.w, deck: deck) }
+                    } label: {
+                        Image(systemName: "speaker.wave.2.fill")
+                            .font(.system(size: max(16, fontSize * 0.7)))
+                            .foregroundStyle(Color.accentColor)
+                            .frame(width: 44, height: 44)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.borderless)
+                    .accessibilityLabel("단어 읽기")
+                }
                 if showExtras {
                     if !e.wordTags.isEmpty {
                         HStack(spacing: 6) {
