@@ -274,6 +274,7 @@ struct FlashcardView: View {
     private func answer(knew: Bool) {
         guard !moving, let w = current else { return }
         moving = true
+        store.record(w.id, correct: knew)
         if knew {
             known += 1
         } else if !unknown.contains(where: { $0.id == w.id }) {

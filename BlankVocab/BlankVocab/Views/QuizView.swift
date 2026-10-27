@@ -32,6 +32,8 @@ struct QuizView: View {
     private func question(_ q: Quiz, _ x: Word) -> some View {
         let b = Blank(x)
         let done = q.done
+        let isListen = q.mode == .listen
+        let spoken = x.speakText
 
         HStack(spacing: 10) {
             Button { store.quiz = nil } label: { Image(systemName: "xmark").font(.headline) }
@@ -44,7 +46,7 @@ struct QuizView: View {
         .padding(.bottom, 12)
 
         VStack(alignment: .leading, spacing: 0) {
-            Text(q.isTest ? "테스트" : "퀴즈")
+            Text(q.mode == .listen ? "리스닝" : q.mode == .today ? "오늘의 학습" : q.isTest ? "테스트" : "퀴즈")
                 .font(.caption.weight(.heavy))
                 .foregroundStyle(Theme.pri)
                 .padding(.horizontal, 10)
@@ -53,9 +55,18 @@ struct QuizView: View {
             VStack(alignment: .leading, spacing: 10) {
                 // 문제를 풀기 전에는 뜻만 보여줘요. 품사 등은 정답 확인 후 아래에 나와요.
                 Text(x.m).font(.title3.weight(.heavy)).foregroundStyle(Theme.ok)
-                sentence(b, done: done)
-                    .font(.system(size: 22))
-                    .lineSpacing(8)
+                if q.mode == .listen && done == nil {
+                    // 리스닝: 문장은 숨기고 소리로만 들려줘요.
+                    Button { Speech.shared.say(x.speakText) } label: {
+                        Label("문장을 듣고 빈칸에 들어갈 단어를 쓰세요", systemImage: "headphones")
+                            .font(.headline)
+                    }
+                    .buttonStyle(.pill)
+                } else {
+                    sentence(b, done: done)
+                        .font(.system(size: 22))
+                        .lineSpacing(8)
+                }
                 if done == nil {
                     TextField("빈칸에 들어갈 단어", text: $answer)
                         .font(.system(size: 20, weight: .heavy))
@@ -72,6 +83,11 @@ struct QuizView: View {
             .padding(16)
             .frame(maxWidth: .infinity, minHeight: 150, alignment: .topLeading)
             .background(Theme.card, in: UnevenRoundedRectangle(bottomLeadingRadius: 20, bottomTrailingRadius: 20, topTrailingRadius: 20))
+        }
+        .task(id: "\(q.sid)-\(q.i)") {
+            guard isListen else { return }
+            try? await Task.sleep(for: .milliseconds(300))
+            Speech.shared.say(spoken)
         }
 
         if let done, !done.ok {
@@ -122,7 +138,7 @@ struct QuizView: View {
             }
             .buttonStyle(.pill)
             .accessibilityLabel("헷갈리는 단어 표시")
-            Button { Speech.shared.say(b.fullSentence) } label: { Image(systemName: "speaker.wave.2.fill") }
+            Button { Speech.shared.say(x.speakText) } label: { Image(systemName: "speaker.wave.2.fill") }
                 .buttonStyle(.pill)
                 .disabled(q.isTest && done == nil)
                 .accessibilityLabel("문장 읽기")

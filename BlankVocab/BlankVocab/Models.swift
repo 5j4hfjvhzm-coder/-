@@ -29,6 +29,16 @@ struct Word: Codable, Identifiable, Hashable {
     /// 이미지(I) — 주소(URL)나 파일 이름
     var img: String = ""
 
+    // 학습 기록 (망각곡선 복습)
+    /// 복습 단계 0~5. 맞힐 때마다 올라가고, 틀리면 0으로 돌아가요. 5면 "외움".
+    var box: Int = 0
+    /// 다음 복습 시각 (1970년부터 밀리초, 웹 버전과 같은 형식)
+    var due: Double = 0
+    /// 틀린 횟수 (오답노트)
+    var wrongCount: Int = 0
+    /// 마지막으로 공부한 시각 (밀리초). 0이면 아직 안 배운 새 단어.
+    var seen: Double = 0
+
     init(w: String, m: String, e: String = "", p: String = "", star: Bool = false, id: String = Word.newID()) {
         self.id = id
         self.w = w
@@ -56,7 +66,27 @@ struct Word: Codable, Identifiable, Hashable {
         return URL(string: s)
     }
 
-    enum CodingKeys: String, CodingKey { case id, w, m, e, p, star, g, pron, der, sim, syn, ant, d, c, img }
+    enum CodingKeys: String, CodingKey { case id, w, m, e, p, star, g, pron, der, sim, syn, ant, d, c, img, box, due, wrongCount = "wc", seen }
+
+    var isNew: Bool { seen == 0 }
+    var isMastered: Bool { box >= 5 }
+    var isDue: Bool { seen > 0 && due <= Date().timeIntervalSince1970 * 1000 }
+
+    /// 예문에서 괄호 안 한국어 해석을 뺀 영어 문장
+    var sentenceEN: String {
+        var s = e
+        while let r = s.range(of: #"\([^()]*[가-힣][^()]*\)"#, options: .regularExpression) { s.removeSubrange(r) }
+        return s.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    /// 읽어줄 영어 (한국어 해석은 빼고, 예문이 없으면 단어)
+    var speakText: String { sentenceEN.isEmpty ? w : sentenceEN }
+
+    /// 예문 괄호 안의 한국어 해석 (없으면 빈 문자열)
+    var sentenceKO: String {
+        guard let r = e.range(of: #"\([^()]*[가-힣][^()]*\)"#, options: .regularExpression) else { return "" }
+        return String(e[r]).trimmingCharacters(in: CharacterSet(charactersIn: "() "))
+    }
 
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
@@ -76,6 +106,10 @@ struct Word: Codable, Identifiable, Hashable {
         d = str(.d)
         self.c = str(.c)
         img = str(.img)
+        box = (try? c.decodeIfPresent(Int.self, forKey: .box)) ?? 0
+        due = (try? c.decodeIfPresent(Double.self, forKey: .due)) ?? 0
+        wrongCount = (try? c.decodeIfPresent(Int.self, forKey: .wrongCount)) ?? 0
+        seen = (try? c.decodeIfPresent(Double.self, forKey: .seen)) ?? 0
     }
 }
 
@@ -115,13 +149,16 @@ struct Book: Codable, Identifiable, Hashable {
 }
 
 enum QuizMode: String, Codable {
-    case all, test, star
+    case all, test, star, today, listen, wrongNote
 
     var label: String {
         switch self {
         case .all: return "전체 퀴즈"
         case .test: return "전체 테스트"
         case .star: return "★ 헷갈리는 단어"
+        case .today: return "오늘의 학습"
+        case .listen: return "🎧 리스닝"
+        case .wrongNote: return "📝 오답노트"
         }
     }
 }
@@ -147,6 +184,10 @@ struct AppData: Codable {
     var sess: [SavedSession] = []
     var skip: Bool = false
     var auto: Bool = false
+    /// 하루 목표 (새 단어 수)
+    var goal: Int = 10
+    /// 날짜("yyyy-MM-dd")별 푼 문제 수
+    var history: [String: Int] = [:]
 
     init() {}
 
@@ -156,6 +197,8 @@ struct AppData: Codable {
         sess = (try? c.decodeIfPresent([SavedSession].self, forKey: .sess)) ?? []
         skip = (try? c.decodeIfPresent(Bool.self, forKey: .skip)) ?? false
         auto = (try? c.decodeIfPresent(Bool.self, forKey: .auto)) ?? false
+        goal = (try? c.decodeIfPresent(Int.self, forKey: .goal)) ?? 10
+        history = (try? c.decodeIfPresent([String: Int].self, forKey: .history)) ?? [:]
     }
 }
 

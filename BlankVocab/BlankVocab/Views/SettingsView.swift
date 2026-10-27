@@ -20,6 +20,8 @@ struct SettingsView: View {
                 Text("\"AI로 틀린 이유 설명\"과 \"AI 프리토킹\"에 여기서 고른 AI를 써요. 키는 이 기기의 키체인에만 저장돼요.")
             }
 
+            StudySettingsSection()
+
             APIKeySection(provider: .claude)
             APIKeySection(provider: .gemini)
 
@@ -162,6 +164,67 @@ private struct APIKeySection: View {
             result = (true, "연결됐어요. ✅" + (provider == .gemini ? " (모델: \(AI.geminiModel))" : ""))
         } catch {
             result = (false, AI.describe(error))
+        }
+    }
+}
+
+/// 하루 목표, 읽기 속도, 매일 학습 알림
+private struct StudySettingsSection: View {
+    @Environment(Store.self) private var store
+    @AppStorage("speechSpeed") private var speed = Speech.Speed.normal.rawValue
+    @AppStorage("reminderOn") private var reminderOn = false
+    @AppStorage("reminderMinutes") private var reminderMinutes = 20 * 60
+
+    var body: some View {
+        Section {
+            Picker("하루 목표", selection: Binding(get: { store.data.goal }, set: { store.setGoal($0) })) {
+                Text("여유롭게 5개").tag(5)
+                Text("적당하게 10개").tag(10)
+                Text("열심히 20개").tag(20)
+                Text("열정적으로 50개").tag(50)
+                if ![5, 10, 20, 50].contains(store.data.goal) {
+                    Text("직접 \(store.data.goal)개").tag(store.data.goal)
+                }
+            }
+            Stepper("직접 정하기: \(store.data.goal)개", value: Binding(get: { store.data.goal }, set: { store.setGoal($0) }), in: 1...200)
+            Picker("읽기 속도", selection: $speed) {
+                ForEach(Speech.Speed.allCases) { Text($0.name).tag($0.rawValue) }
+            }
+            Toggle("매일 학습 알림", isOn: $reminderOn)
+                .onChange(of: reminderOn) { schedule() }
+            if reminderOn {
+                DatePicker("알림 시간", selection: Binding(get: { time }, set: { setTime($0) }), displayedComponents: .hourAndMinute)
+            }
+        } header: {
+            Text("학습 설정")
+        } footer: {
+            Text("하루 목표만큼 새 단어가 \"오늘의 학습\"에 나와요. 하루 \(Store.streakMin)문제 이상 풀면 🔥 연속 학습이 이어져요.")
+        }
+    }
+
+    private var time: Date {
+        Calendar.current.date(bySettingHour: reminderMinutes / 60, minute: reminderMinutes % 60, second: 0, of: Date()) ?? Date()
+    }
+
+    private func setTime(_ d: Date) {
+        let c = Calendar.current.dateComponents([.hour, .minute], from: d)
+        reminderMinutes = (c.hour ?? 20) * 60 + (c.minute ?? 0)
+        schedule()
+    }
+
+    private func schedule() {
+        guard reminderOn else {
+            Reminder.disable()
+            return
+        }
+        let h = reminderMinutes / 60, m = reminderMinutes % 60
+        Task {
+            if await Reminder.enable(hour: h, minute: m) {
+                store.show(String(format: "매일 %02d:%02d에 알려 드릴게요.", h, m))
+            } else {
+                reminderOn = false
+                store.show("알림 권한이 필요해요. 설정 › 알림에서 빈칸 단어장을 허용해 주세요.")
+            }
         }
     }
 }

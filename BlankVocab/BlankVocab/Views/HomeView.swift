@@ -5,6 +5,13 @@ enum Route: Hashable {
     case book(Int)
     case chat([Int])
     case flash([Int])
+    case learn([Int])
+    case choice([Int], ChoiceKind)
+    case arrange([Int])
+    case speak([Int])
+    case booster([Int])
+    case wrongNote([Int])
+    case stats([Int])
     case settings
 }
 
@@ -25,6 +32,7 @@ struct HomeView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 10) {
                     header
+                    if !store.data.books.isEmpty { learnCard }
                     if !store.data.sess.isEmpty { sessions }
                     books
                     if !store.data.books.isEmpty { multiCard }
@@ -53,6 +61,13 @@ struct HomeView: View {
                 case .book(let id): BookView(bookID: id)
                 case .chat(let ids): ChatView(bookIDs: ids)
                 case .flash(let ids): FlashcardView(bookIDs: ids)
+                case .learn(let ids): LearnView(bookIDs: ids)
+                case .choice(let ids, let kind): ChoiceQuizView(bookIDs: ids, kind: kind)
+                case .arrange(let ids): ArrangeView(bookIDs: ids)
+                case .speak(let ids): SpeakView(bookIDs: ids)
+                case .booster(let ids): BoosterView(bookIDs: ids)
+                case .wrongNote(let ids): WrongNoteView(bookIDs: ids)
+                case .stats(let ids): StatsView(bookIDs: ids)
                 case .settings: SettingsView()
                 }
             }
@@ -90,6 +105,36 @@ struct HomeView: View {
         }
         .padding(.top, 8)
         .padding(.bottom, 6)
+    }
+
+    /// 오늘의 학습 · 연속 학습 · 학습 모드 바로가기
+    private var learnCard: some View {
+        let pool = selectedIDs.isEmpty ? allIDs : selectedIDs
+        let due = store.dueWords(pool).count
+        let new = min(store.newWords(pool).count, store.data.goal)
+        return VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .firstTextBaseline) {
+                Text("🔥 \(store.streak)일 연속").font(.headline.weight(.heavy))
+                Spacer()
+                Text("오늘 \(store.todayCount) / 목표 \(store.data.goal)")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(Theme.sub)
+            }
+            ProgressView(value: min(Double(store.todayCount), Double(store.data.goal)), total: Double(max(store.data.goal, 1)))
+                .tint(Theme.pri)
+            Text("복습할 단어 \(due)개 · 새 단어 \(new)개" + (selectedIDs.isEmpty ? "" : " (선택한 단어장)"))
+                .font(.footnote)
+                .foregroundStyle(Theme.sub)
+            HStack(spacing: 8) {
+                Button("오늘의 학습 시작") { store.startToday(pool) }
+                    .buttonStyle(.pillPrimary)
+                    .disabled(due == 0 && new == 0)
+                Button("학습 모드") { path.append(.learn(pool)) }
+                    .buttonStyle(.pill)
+                Spacer(minLength: 0)
+            }
+        }
+        .card()
     }
 
     private var sessions: some View {

@@ -191,9 +191,10 @@ final class Store {
         let ok = grade != .wrong
         if ok { q.ok += 1 } else { q.wrong.append(x) }
         q.done = Quiz.Done(ok: ok, val: v, baseForm: grade == .baseForm)
+        record(x.id, correct: ok)
         q.explanation = ""
         quiz = q
-        if data.auto { Speech.shared.say(Blank(x).fullSentence) }
+        if data.auto { Speech.shared.say(x.speakText) }
     }
 
     /// "정답 보기": 답을 모를 때 정답과 단어 정보를 바로 보여줘요. 틀린 문제로 기록돼요.
@@ -201,9 +202,10 @@ final class Store {
         guard var q = quiz, q.done == nil, let x = q.current else { return }
         q.wrong.append(x)
         q.done = Quiz.Done(ok: false, val: "", revealed: true)
+        record(x.id, correct: false)
         q.explanation = ""
         quiz = q
-        if data.auto { Speech.shared.say(Blank(x).fullSentence) }
+        if data.auto { Speech.shared.say(x.speakText) }
     }
 
     func next() {
@@ -270,6 +272,111 @@ final class Store {
     func restart() {
         guard let q = quiz else { return }
         start(q.mode, ids: q.sc, multi: q.ids != nil)
+    }
+
+    // MARK: - 학습 기록 · 망각곡선 복습
+
+    /// 복습 단계별 다음 복습까지의 날짜 (말해보카처럼 맞힐수록 간격이 길어져요)
+    static let intervals: [Double] = [0, 1, 3, 7, 21, 30]
+    /// 하루에 이만큼 풀면 연속 학습 🔥 이 이어져요.
+    static let streakMin = 5
+
+    var allWords: [Word] { data.books.flatMap(\.words) }
+
+    /// 한 문제 결과를 기록해요: 복습 단계, 다음 복습 날짜, 오답 수, 오늘 푼 문제 수.
+    func record(_ wordID: String, correct: Bool) {
+        let now = Date().timeIntervalSince1970 * 1000
+        for b in data.books.indices {
+            for i in data.books[b].words.indices where data.books[b].words[i].id == wordID {
+                var w = data.books[b].words[i]
+                if correct {
+                    w.box = min(w.box + 1, 5)
+                } else {
+                    w.box = 0
+                    w.wrongCount += 1
+                }
+                // 틀리면 10분 뒤 다시, 맞히면 단계별 간격 뒤에 복습
+                w.due = now + (correct ? Store.intervals[w.box] * 86_400_000 : 600_000)
+                w.seen = now
+                data.books[b].words[i] = w
+            }
+        }
+        data.history[Store.dayKey(Date()), default: 0] += 1
+        save()
+    }
+
+    /// 맞힌 단어를 "외움"으로 표시 (실력 진단 결과)
+    func markMastered(_ ids: Set<String>) {
+        let now = Date().timeIntervalSince1970 * 1000
+        for b in data.books.indices {
+            for i in data.books[b].words.indices where ids.contains(data.books[b].words[i].id) {
+                data.books[b].words[i].box = 5
+                data.books[b].words[i].seen = now
+                data.books[b].words[i].due = now + Store.intervals[5] * 86_400_000
+            }
+        }
+        save()
+    }
+
+    func clearWrongCount(_ ids: [Int]) {
+        for b in data.books.indices where ids.contains(data.books[b].id) {
+            for i in data.books[b].words.indices { data.books[b].words[i].wrongCount = 0 }
+        }
+        save()
+    }
+
+    func setGoal(_ n: Int) { data.goal = max(1, n); save() }
+
+    static func dayKey(_ d: Date) -> String {
+        let f = DateFormatter()
+        f.calendar = Calendar(identifier: .gregorian)
+        f.locale = Locale(identifier: "en_US_POSIX")
+        f.dateFormat = "yyyy-MM-dd"
+        return f.string(from: d)
+    }
+
+    var todayCount: Int { data.history[Store.dayKey(Date())] ?? 0 }
+
+    /// 연속 학습 일수. 오늘 아직 5문제를 안 풀었으면 어제까지 센 값을 보여줘요.
+    var streak: Int {
+        let cal = Calendar.current
+        var day = Date()
+        if (data.history[Store.dayKey(day)] ?? 0) < Store.streakMin {
+            day = cal.date(byAdding: .day, value: -1, to: day) ?? day
+        }
+        var n = 0
+        while (data.history[Store.dayKey(day)] ?? 0) >= Store.streakMin {
+            n += 1
+            guard let prev = cal.date(byAdding: .day, value: -1, to: day) else { break }
+            day = prev
+        }
+        return n
+    }
+
+    func dueWords(_ ids: [Int]) -> [Word] {
+        words(in: ids).filter(\.isDue).sorted { $0.due < $1.due }
+    }
+
+    func newWords(_ ids: [Int]) -> [Word] {
+        words(in: ids).filter(\.isNew)
+    }
+
+    /// 오늘의 학습: 복습할 단어(최대 30개) + 새 단어(하루 목표만큼)를 빈칸 퀴즈로 풀어요.
+    func startToday(_ ids: [Int]) {
+        let reviews = Array(dueWords(ids).prefix(30))
+        let news = Array(newWords(ids).prefix(data.goal))
+        guard !(reviews.isEmpty && news.isEmpty) else {
+            show("오늘 할 학습을 다 했어요! 🎉 내일 복습할 단어가 다시 나와요.")
+            return
+        }
+        startWords(reviews + news, mode: .today, ids: ids,
+                   label: "오늘의 학습 · 복습 \(reviews.count) · 새 단어 \(news.count)")
+    }
+
+    /// 정해진 단어 목록으로 빈칸 퀴즈를 시작해요.
+    func startWords(_ words: [Word], mode: QuizMode, ids: [Int], label: String, shuffle: Bool = true) {
+        guard !words.isEmpty else { return }
+        quiz = Quiz(list: shuffle ? words.shuffled() : words, mode: mode, ids: ids, sc: ids, label: label, sid: Book.newID())
     }
 
     // MARK: - AI 설명

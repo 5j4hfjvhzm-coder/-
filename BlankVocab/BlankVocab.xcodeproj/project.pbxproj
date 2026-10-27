@@ -300,6 +300,8 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = "빈칸 단어장";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "스피킹 연습에서 내가 말한 영어 문장을 듣기 위해 마이크를 사용해요.";
+				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "스피킹 연습에서 내가 말한 영어 문장을 글자로 바꿔 점수를 매기기 위해 음성 인식을 사용해요.";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.education";
 				INFOPLIST_KEY_LSSupportsOpeningDocumentsInPlace = NO;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -331,6 +333,8 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = "빈칸 단어장";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "스피킹 연습에서 내가 말한 영어 문장을 듣기 위해 마이크를 사용해요.";
+				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "스피킹 연습에서 내가 말한 영어 문장을 글자로 바꿔 점수를 매기기 위해 음성 인식을 사용해요.";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.education";
 				INFOPLIST_KEY_LSSupportsOpeningDocumentsInPlace = NO;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
