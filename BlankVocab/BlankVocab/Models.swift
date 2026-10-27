@@ -171,6 +171,8 @@ struct Quiz {
         var val: String
         /// "정답 보기"로 답을 먼저 본 경우
         var revealed = false
+        /// 기본형으로 맞혀서 정답 처리했지만 문장에는 다른 형태가 들어가는 경우
+        var baseForm = false
     }
 
     var list: [Word]

@@ -75,7 +75,11 @@ struct QuizView: View {
         }
 
         if let done, !done.ok {
-            Text("정답은 **\(b.ans)** 이에요.")
+            Text(LocalizedStringKey("정답은 **\(b.ans)** 이에요." + (done.revealed ? "" : " (입력: \(done.val))")))
+                .hintBox()
+        }
+        if let done, done.ok, done.baseForm {
+            Text("맞았어요! 이 문장에서는 **\(b.ans)** 형태로 써요.")
                 .hintBox()
         }
         if done != nil {

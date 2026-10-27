@@ -185,11 +185,12 @@ final class Store {
 
     func check(_ answer: String) {
         guard var q = quiz, q.done == nil, let x = q.current else { return }
-        let v = answer.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let v = answer.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !v.isEmpty else { return }
-        let ok = v == Blank(x).ans.lowercased()
+        let grade = Blank(x).grade(v, word: x)
+        let ok = grade != .wrong
         if ok { q.ok += 1 } else { q.wrong.append(x) }
-        q.done = Quiz.Done(ok: ok, val: v)
+        q.done = Quiz.Done(ok: ok, val: v, baseForm: grade == .baseForm)
         q.explanation = ""
         quiz = q
         if data.auto { Speech.shared.say(Blank(x).fullSentence) }
