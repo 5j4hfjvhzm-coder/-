@@ -18,14 +18,15 @@ extension MathUnit {
     }
 }
 
+/// 아이패드: 왼쪽은 학습지 목록, 오른쪽은 고른 학습지
 struct ContentView: View {
     @EnvironmentObject var store: Store
-    @State private var path: [Route] = []
+    @State private var selection: Route?
     @State private var showSettings = false
 
     var body: some View {
-        NavigationStack(path: $path) {
-            List {
+        NavigationSplitView {
+            List(selection: $selection) {
                 Section { summary }
 
                 Section("오늘의 학습지") {
@@ -60,20 +61,41 @@ struct ContentView: View {
                 }
             }
             .navigationTitle("매일 수학")
+            .navigationSplitViewColumnWidth(min: 300, ideal: 340, max: 400)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button { showSettings = true } label: { Image(systemName: "gearshape") }
                 }
             }
-            .navigationDestination(for: Route.self) { route in
-                switch route {
-                case .sheet(let id): WorksheetView(sheetID: id, path: $path)
-                case .history: HistoryView()
+        } detail: {
+            NavigationStack {
+                switch selection {
+                case .sheet(let id):
+                    WorksheetView(sheetID: id, selection: $selection)
+                        .id(id)
+                case .history:
+                    HistoryView(selection: $selection)
+                case nil:
+                    welcome
                 }
             }
-            .sheet(isPresented: $showSettings) {
-                SettingsView().environmentObject(store)
+        }
+        .sheet(isPresented: $showSettings) {
+            SettingsView().environmentObject(store)
+        }
+        .onAppear {
+            // 처음엔 가장 오래된 안 푼 학습지(없으면 오늘 것)를 열어 둬요.
+            if selection == nil, let first = store.pending.first ?? store.todaySheet {
+                selection = .sheet(first.id)
             }
+        }
+    }
+
+    private var welcome: some View {
+        ContentUnavailableView {
+            Label("학습지를 골라 주세요", systemImage: "doc.text")
+        } description: {
+            Text(store.pending.isEmpty ? "밀린 학습지가 없어요. 내일 또 만나요! 👋" : "남은 학습지 \(store.pending.count)장")
         }
     }
 

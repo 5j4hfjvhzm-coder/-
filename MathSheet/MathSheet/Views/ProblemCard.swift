@@ -37,6 +37,8 @@ struct ProblemCard: View {
             if done { result }
         }
         .padding()
+        // 2열일 때 옆 카드와 높이를 맞춰요
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .background(RoundedRectangle(cornerRadius: 16).fill(Color(.secondarySystemGroupedBackground)))
         .overlay(
             RoundedRectangle(cornerRadius: 16)

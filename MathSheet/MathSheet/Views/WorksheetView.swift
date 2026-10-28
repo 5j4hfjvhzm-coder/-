@@ -3,7 +3,7 @@ import SwiftUI
 struct WorksheetView: View {
     @EnvironmentObject var store: Store
     let sheetID: String
-    @Binding var path: [Route]
+    @Binding var selection: Route?
 
     @FocusState private var focus: String?
     @State private var confirmSubmit = false
@@ -21,19 +21,33 @@ struct WorksheetView: View {
     }
 
     private func content(_ sheet: Worksheet) -> some View {
-        ScrollViewReader { proxy in
+        GeometryReader { geo in
+          ScrollViewReader { proxy in
             ScrollView {
-                VStack(spacing: 14) {
+                VStack(spacing: 16) {
                     header(sheet).id("top")
 
-                    ForEach(Array(sheet.problems.enumerated()), id: \.element.id) { i, p in
-                        ProblemCard(problem: p, index: i + 1, sheetID: sheet.id, done: sheet.isDone, focus: $focus)
+                    // 가로로 넓으면 (가로 모드 등) 문제를 2열로
+                    let cols = geo.size.width >= 800 ? 2 : 1
+                    let items = Array(sheet.problems.enumerated())
+                    Grid(alignment: .top, horizontalSpacing: 16, verticalSpacing: 16) {
+                        ForEach(Array(stride(from: 0, to: items.count, by: cols)), id: \.self) { start in
+                            GridRow {
+                                ForEach(Array(items[start..<min(start + cols, items.count)]), id: \.element.id) { i, p in
+                                    ProblemCard(problem: p, index: i + 1, sheetID: sheet.id, done: sheet.isDone, focus: $focus)
+                                }
+                                if start + cols > items.count {
+                                    Color.clear.gridCellUnsizedAxes([.horizontal, .vertical])
+                                }
+                            }
+                        }
                     }
 
                     footer(sheet, proxy: proxy)
+                        .frame(maxWidth: 560)
                 }
-                .padding()
-                .frame(maxWidth: 760)
+                .padding(24)
+                .frame(maxWidth: 1200)
                 .frame(maxWidth: .infinity)
             }
             .scrollDismissesKeyboard(.interactively)
@@ -52,6 +66,7 @@ struct WorksheetView: View {
                 Button("채점하기") { submit(sheet, proxy: proxy) }
                 Button("더 풀래요", role: .cancel) {}
             }
+          }
         }
     }
 
@@ -94,7 +109,7 @@ struct WorksheetView: View {
             .padding(.top, 6)
         } else if let next = store.pending.first {
             Button {
-                path = [.sheet(next.id)]
+                selection = .sheet(next.id)
             } label: {
                 Label("다음 학습지 풀기 (\(Day.label(next.id)))", systemImage: "arrow.right.circle.fill")
                     .font(.headline)

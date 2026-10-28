@@ -2,6 +2,7 @@ import SwiftUI
 
 struct HistoryView: View {
     @EnvironmentObject var store: Store
+    @Binding var selection: Route?
 
     var body: some View {
         List {
@@ -33,9 +34,11 @@ struct HistoryView: View {
                     Text("아직 다 푼 학습지가 없어요.").foregroundStyle(.secondary)
                 }
                 ForEach(store.done) { sheet in
-                    NavigationLink(value: Route.sheet(sheet.id)) {
+                    Button { selection = .sheet(sheet.id) } label: {
                         SheetRow(sheet: sheet, highlight: false)
+                            .contentShape(Rectangle())
                     }
+                    .buttonStyle(.plain)
                 }
             }
         }
