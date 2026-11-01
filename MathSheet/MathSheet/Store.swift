@@ -48,6 +48,11 @@ final class Store: ObservableObject {
             sheets = saved.sheets
             settings = saved.settings
             lastDay = saved.lastDay
+            // 한국어 뜻이 없는 예전 학습지 중 아직 안 건드린 것은 새로 만들어요.
+            for i in sheets.indices where !sheets[i].isDone && sheets[i].answeredCount == 0
+                && sheets[i].problems.contains(where: { $0.ko == nil }) {
+                sheets[i].problems = Generator.worksheet(day: sheets[i].id, settings: settings)
+            }
         }
         refresh()
     }

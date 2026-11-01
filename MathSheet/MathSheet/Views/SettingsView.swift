@@ -12,6 +12,7 @@ struct SettingsView: View {
                     Stepper("하루 문제 수: \(store.settings.problemsPerDay)문제",
                             value: $store.settings.problemsPerDay, in: 5...20)
                     Toggle("주말은 쉬기 (토·일 학습지 없음)", isOn: $store.settings.skipWeekends)
+                    Toggle("문제의 한국어 뜻 처음부터 펼쳐 보기", isOn: $store.settings.showKorean)
                 } header: {
                     Text("학습지")
                 } footer: {

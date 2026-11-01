@@ -81,6 +81,8 @@ struct WorksheetView: View {
                     .font(.subheadline).foregroundStyle(.secondary)
             } else {
                 Text("Daily Math Worksheet").font(.title3.bold())
+                Text("💡 모르는 영어 단어를 누르면 한국어 뜻이 나와요")
+                    .font(.callout).foregroundStyle(.secondary)
                 Text("Grade 5 · Semester 2  —  \(sheet.answeredCount) / \(sheet.problems.count) answered")
                     .font(.subheadline).foregroundStyle(.secondary)
                 ProgressView(value: Double(sheet.answeredCount), total: Double(max(sheet.problems.count, 1)))

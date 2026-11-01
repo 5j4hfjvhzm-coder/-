@@ -12,6 +12,10 @@ struct ProblemCard: View {
     @State private var showWhy = false
     @State private var retry = ""
     @State private var retryResult: Bool?
+    /// nil 이면 설정(한국어 뜻 펼쳐 보기)을 따라요
+    @State private var showKo: Bool?
+
+    private var koVisible: Bool { showKo ?? store.settings.showKorean }
 
     init(problem: Problem, index: Int, sheetID: String, done: Bool, focus: FocusState<String?>.Binding) {
         self.problem = problem
@@ -25,9 +29,10 @@ struct ProblemCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             top
-            Text(problem.text)
-                .font(.title3)
-                .fixedSize(horizontal: false, vertical: true)
+            TappableText(text: problem.text)
+            if let ko = problem.ko {
+                korean(ko)
+            }
             if let e = problem.expr {
                 ExprView(expr: e + " =")
                     .frame(maxWidth: .infinity, alignment: .center)
@@ -79,6 +84,29 @@ struct ProblemCard: View {
         }
     }
 
+    // MARK: - 한국어 뜻
+
+    private func korean(_ ko: String) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Button {
+                withAnimation(.easeInOut(duration: 0.2)) { showKo = !koVisible }
+            } label: {
+                Label(koVisible ? "한국어 뜻 숨기기" : "한국어 뜻 보기",
+                      systemImage: koVisible ? "chevron.up.circle" : "character.book.closed")
+                    .font(.callout.bold())
+            }
+            .buttonStyle(.borderless)
+            if koVisible {
+                Text(ko)
+                    .font(.body)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(10)
+                    .background(RoundedRectangle(cornerRadius: 10).fill(Color.yellow.opacity(0.15)))
+            }
+        }
+    }
+
     // MARK: - 입력
 
     private var numberInput: some View {
@@ -114,7 +142,12 @@ struct ProblemCard: View {
                 } label: {
                     HStack {
                         Image(systemName: icon(for: c))
-                        Text(c).multilineTextAlignment(.leading)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(c).multilineTextAlignment(.leading)
+                            if koVisible, let k = Glossary.choiceKo[c] {
+                                Text(k).font(.callout).foregroundStyle(.secondary)
+                            }
+                        }
                         Spacer()
                     }
                     .padding(10)
@@ -160,9 +193,7 @@ struct ProblemCard: View {
             }
 
             DisclosureGroup(isExpanded: $showWhy) {
-                Text(problem.explanation)
-                    .font(.callout)
-                    .fixedSize(horizontal: false, vertical: true)
+                TappableText(text: problem.explanation, font: .callout)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.top, 4)
             } label: {

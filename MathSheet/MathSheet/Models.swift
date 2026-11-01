@@ -147,6 +147,8 @@ struct Problem: Codable, Identifiable {
     var unitLabel: String?
     /// 풀이 (영어)
     var explanation: String
+    /// 문제의 한국어 뜻
+    var ko: String?
 
     var userAnswer: String = ""
     var correct: Bool?
@@ -182,6 +184,8 @@ struct Settings: Codable, Equatable {
     var reminderOn = false
     /// 알림 시각 (자정부터 분)
     var reminderMinutes = 17 * 60
+    /// 문제의 한국어 뜻을 처음부터 펼쳐 둘지
+    var showKorean = false
 
     init() {}
 
@@ -193,6 +197,7 @@ struct Settings: Codable, Equatable {
         skipWeekends = (try? c.decode(Bool.self, forKey: .skipWeekends)) ?? base.skipWeekends
         reminderOn = (try? c.decode(Bool.self, forKey: .reminderOn)) ?? base.reminderOn
         reminderMinutes = (try? c.decode(Int.self, forKey: .reminderMinutes)) ?? base.reminderMinutes
+        showKorean = (try? c.decode(Bool.self, forKey: .showKorean)) ?? base.showKorean
     }
 }
 
