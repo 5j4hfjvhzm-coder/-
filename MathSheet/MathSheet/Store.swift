@@ -24,13 +24,15 @@ final class Store: ObservableObject {
         didSet {
             guard settings != oldValue else { return }
             if settings.units.isEmpty { settings.units = oldValue.units }
-            if settings.problemsPerDay != oldValue.problemsPerDay || settings.units != oldValue.units {
+            if settings.problemsPerDay != oldValue.problemsPerDay || settings.units != oldValue.units
+                || settings.studyMode != oldValue.studyMode || settings.chapterUnit != oldValue.chapterUnit
+                || settings.chapterDays != oldValue.chapterDays || settings.chapterStart != oldValue.chapterStart
+                || settings.challengePercent != oldValue.challengePercent {
                 // 아직 한 문제도 안 건드린 학습지는 새 설정으로 다시 만들어요.
-                for i in sheets.indices where !sheets[i].isDone && sheets[i].answeredCount == 0 {
-                    sheets[i].problems = Generator.worksheet(day: sheets[i].id, settings: settings)
-                }
+                regenerateUntouched()
             }
             save()
+            if settings.sheetsPerDay != oldValue.sheetsPerDay { refresh() }
             if settings.reminderOn != oldValue.reminderOn || settings.reminderMinutes != oldValue.reminderMinutes {
                 updateReminder()
             }
@@ -51,7 +53,7 @@ final class Store: ObservableObject {
             // 한국어 뜻이 없는 예전 학습지 중 아직 안 건드린 것은 새로 만들어요.
             for i in sheets.indices where !sheets[i].isDone && sheets[i].answeredCount == 0
                 && sheets[i].problems.contains(where: { $0.ko == nil }) {
-                sheets[i].problems = Generator.worksheet(day: sheets[i].id, settings: settings)
+                sheets[i].problems = Generator.worksheet(day: sheets[i].dayKey, number: sheets[i].seq, settings: settings)
             }
         }
         refresh()
@@ -69,23 +71,33 @@ final class Store: ObservableObject {
 
     // MARK: - 학습지 만들기
 
-    /// 지난번에 만든 날 다음 날부터 오늘까지 학습지를 만들어요.
+    /// 지난번에 만든 날부터 오늘까지, 하루에 정한 장수만큼 학습지를 만들어요.
     func refresh() {
         let today = Day.today
-        var day = lastDay.map(Day.next) ?? today
+        if settings.chapterStart == nil { settings.chapterStart = today }
+        var day = lastDay ?? today
         var changed = false
+        let perDay = max(settings.sheetsPerDay, 1)
         while day <= today {
-            if !(settings.skipWeekends && Day.isWeekend(day)) && !sheets.contains(where: { $0.id == day }) {
-                sheets.append(Worksheet(id: day, problems: Generator.worksheet(day: day, settings: settings)))
-                changed = true
+            if !(settings.skipWeekends && Day.isWeekend(day)) {
+                for n in 1...perDay where !sheets.contains(where: { $0.dayKey == day && $0.seq == n }) {
+                    sheets.append(Worksheet(id: "\(day)#\(n)",
+                                            problems: Generator.worksheet(day: day, number: n, settings: settings),
+                                            day: day, number: n))
+                    changed = true
+                }
             }
             day = Day.next(day)
         }
+        // 오늘 장수를 줄였으면, 안 건드린 남는 학습지는 빼요.
+        let before = sheets.count
+        sheets.removeAll { $0.dayKey == today && $0.seq > perDay && !$0.isDone && $0.answeredCount == 0 }
+        if sheets.count != before { changed = true }
         if lastDay != today {
             lastDay = today
             changed = true
         }
-        sheets.sort { $0.id < $1.id }
+        sheets.sort { ($0.dayKey, $0.seq) < ($1.dayKey, $1.seq) }
         if changed { save() } else { Reminder.setBadge(pending.count) }
     }
 
@@ -94,10 +106,30 @@ final class Store: ObservableObject {
     /// 아직 안 푼 학습지 (오래된 것부터)
     var pending: [Worksheet] { sheets.filter { !$0.isDone } }
 
-    var todaySheet: Worksheet? { sheets.first { $0.id == Day.today } }
+    /// 오늘의 학습지들 (1장부터)
+    var todaySheets: [Worksheet] { sheets.filter { $0.dayKey == Day.today } }
 
     /// 밀린 학습지 (오늘 것 빼고)
-    var overdue: [Worksheet] { pending.filter { $0.id != Day.today } }
+    var overdue: [Worksheet] { pending.filter { $0.dayKey != Day.today } }
+
+    /// 오답노트: 틀린 문제 (최근 것부터)
+    var wrongProblems: [(sheet: Worksheet, problem: Problem)] {
+        done.flatMap { s in s.problems.filter { $0.correct == false }.map { (sheet: s, problem: $0) } }
+    }
+
+    private func regenerateUntouched() {
+        for i in sheets.indices where !sheets[i].isDone && sheets[i].answeredCount == 0 {
+            sheets[i].problems = Generator.worksheet(day: sheets[i].dayKey, number: sheets[i].seq, settings: settings)
+        }
+    }
+
+    /// 지금 공부하는 단원을 바꾸고, 오늘부터 기간을 새로 세요.
+    func startChapter(_ unit: MathUnit) {
+        var s = settings
+        s.chapterUnit = unit
+        s.chapterStart = Day.today
+        settings = s
+    }
 
     /// 다 푼 학습지 (최근 것부터)
     var done: [Worksheet] { sheets.filter(\.isDone).sorted { ($0.submittedAt ?? .distantPast) > ($1.submittedAt ?? .distantPast) } }

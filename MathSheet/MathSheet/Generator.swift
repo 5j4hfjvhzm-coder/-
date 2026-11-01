@@ -67,24 +67,32 @@ enum Generator {
         ("Yuna", "유나"), ("Doyun", "도윤"), ("Juno", "주노"), ("Sora", "소라"), ("Taeyang", "태양"),
     ]
 
-    static func worksheet(day: String, settings: Settings) -> [Problem] {
-        let d = Dice(text: "\(day)#\(settings.problemsPerDay)#\(settings.units.map(\.rawValue).joined())")
-        let units = settings.units.isEmpty ? MathUnit.allCases : settings.units
-        var plan: [MathUnit] = []
-        while plan.count < settings.problemsPerDay { plan += d.shuffle(units) }
-        plan = Array(plan.prefix(settings.problemsPerDay)).sorted { $0.number < $1.number }
+    static func worksheet(day: String, number: Int = 1, settings: Settings) -> [Problem] {
+        let units = settings.units(on: day)
+        let d = Dice(text: "\(day)#\(number)#\(settings.problemsPerDay)#\(units.map(\.rawValue).joined())")
+        var slots: [MathUnit] = []
+        while slots.count < settings.problemsPerDay { slots += d.shuffle(units) }
+        slots = Array(slots.prefix(settings.problemsPerDay))
+        // 심화 문제는 무작위 자리에 정한 비율만큼, 학습지 뒤쪽에 모아요.
+        let hardCount = Int((Double(settings.problemsPerDay) * Double(settings.challengePercent) / 100).rounded())
+        let hardSlots = Set(d.shuffle(Array(slots.indices)).prefix(hardCount))
+        let plan = slots.enumerated()
+            .map { (unit: $0.element, hard: hardSlots.contains($0.offset)) }
+            .sorted { ($0.hard ? 1 : 0, $0.unit.number) < ($1.hard ? 1 : 0, $1.unit.number) }
 
         var out: [Problem] = []
         var seen = Set<String>()
-        for (i, unit) in plan.enumerated() {
-            var p = make(unit, d)
+        for (i, slot) in plan.enumerated() {
+            let unit = slot.unit
+            func one() -> Problem { slot.hard ? challenge(unit, d) : make(unit, d) }
+            var p = one()
             var tries = 0
             while seen.contains(p.text + (p.expr ?? "")) && tries < 20 {
-                p = make(unit, d)
+                p = one()
                 tries += 1
             }
             seen.insert(p.text + (p.expr ?? ""))
-            p.id = "\(day)-\(i)"
+            p.id = "\(day)-\(number)-\(i)"
             out.append(p)
         }
         return out

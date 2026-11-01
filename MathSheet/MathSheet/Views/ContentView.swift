@@ -3,6 +3,7 @@ import SwiftUI
 enum Route: Hashable {
     case sheet(String)
     case history
+    case wrongNotes
 }
 
 extension MathUnit {
@@ -29,15 +30,21 @@ struct ContentView: View {
             List(selection: $selection) {
                 Section { summary }
 
-                Section("오늘의 학습지") {
-                    if let today = store.todaySheet {
-                        NavigationLink(value: Route.sheet(today.id)) {
-                            SheetRow(sheet: today, highlight: true)
-                        }
-                    } else {
+                if store.settings.studyMode == .chapter { chapterBanner }
+
+                Section {
+                    if store.todaySheets.isEmpty {
                         Label("오늘은 쉬는 날이에요 🎉", systemImage: "sun.max")
                             .foregroundStyle(.secondary)
                     }
+                    ForEach(store.todaySheets) { sheet in
+                        NavigationLink(value: Route.sheet(sheet.id)) {
+                            SheetRow(sheet: sheet, highlight: true)
+                        }
+                    }
+                } header: {
+                    let all = store.todaySheets
+                    Text("오늘의 학습지 · \(all.filter(\.isDone).count)/\(all.count)장 완료")
                 }
 
                 if !store.overdue.isEmpty {
@@ -55,6 +62,9 @@ struct ContentView: View {
                 }
 
                 Section {
+                    NavigationLink(value: Route.wrongNotes) {
+                        Label("오답노트 · 틀린 문제 \(store.wrongProblems.count)개", systemImage: "exclamationmark.bubble")
+                    }
                     NavigationLink(value: Route.history) {
                         Label("기록 · 다 푼 학습지 \(store.done.count)장", systemImage: "chart.bar.doc.horizontal")
                     }
@@ -75,6 +85,8 @@ struct ContentView: View {
                         .id(id)
                 case .history:
                     HistoryView(selection: $selection)
+                case .wrongNotes:
+                    WrongNotesView()
                 case nil:
                     welcome
                 }
@@ -85,7 +97,7 @@ struct ContentView: View {
         }
         .onAppear {
             // 처음엔 가장 오래된 안 푼 학습지(없으면 오늘 것)를 열어 둬요.
-            if selection == nil, let first = store.pending.first ?? store.todaySheet {
+            if selection == nil, let first = store.pending.first ?? store.todaySheets.first {
                 selection = .sheet(first.id)
             }
         }
@@ -96,6 +108,34 @@ struct ContentView: View {
             Label("학습지를 골라 주세요", systemImage: "doc.text")
         } description: {
             Text(store.pending.isEmpty ? "밀린 학습지가 없어요. 내일 또 만나요! 👋" : "남은 학습지 \(store.pending.count)장")
+        }
+    }
+
+    /// 이번 단원과 기간
+    private var chapterBanner: some View {
+        let today = Day.today
+        let unit = store.settings.unit(on: today)
+        let period = store.settings.period(on: today)
+        let left = Day.days(from: today, to: period.end) + 1
+        let next = store.settings.unit(on: Day.next(period.end))
+        return Section {
+            HStack(spacing: 12) {
+                Text("\(unit.number)")
+                    .font(.title.bold())
+                    .foregroundStyle(.white)
+                    .frame(width: 48, height: 48)
+                    .background(RoundedRectangle(cornerRadius: 12).fill(unit.color))
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(unit.korean).font(.headline)
+                    Text("\(Day.short(period.start)) ~ \(Day.short(period.end)) · \(left)일 남음")
+                        .font(.caption).foregroundStyle(.secondary)
+                    Text("다음 단원: \(next.number). \(next.korean)")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+            }
+            .padding(.vertical, 4)
+        } header: {
+            Text("이번 단원 (반복 학습)")
         }
     }
 
@@ -129,7 +169,7 @@ struct SheetRow: View {
                 .font(.title2)
                 .foregroundStyle(sheet.isDone ? .green : (highlight ? .orange : .secondary))
             VStack(alignment: .leading, spacing: 3) {
-                Text(Day.label(sheet.id)).font(.headline)
+                Text(sheet.title).font(.headline)
                 HStack(spacing: 4) {
                     ForEach(Array(Set(sheet.problems.map(\.unit))).sorted { $0.number < $1.number }) { u in
                         Circle().fill(u.color).frame(width: 7, height: 7)
@@ -143,7 +183,7 @@ struct SheetRow: View {
                     .font(.headline.monospacedDigit())
                     .foregroundStyle(.green)
             } else if !highlight {
-                let ago = Day.daysAgo(sheet.id)
+                let ago = Day.daysAgo(sheet.dayKey)
                 Text("\(ago)일 전")
                     .font(.caption.bold())
                     .padding(.horizontal, 8).padding(.vertical, 3)

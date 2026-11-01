@@ -16,7 +16,7 @@ struct WorksheetView: View {
                 ContentUnavailableView("학습지가 없어요", systemImage: "doc.questionmark")
             }
         }
-        .navigationTitle(Day.label(sheetID))
+        .navigationTitle(store.sheet(sheetID)?.title ?? "")
         .navigationBarTitleDisplayMode(.inline)
     }
 
@@ -113,7 +113,7 @@ struct WorksheetView: View {
             Button {
                 selection = .sheet(next.id)
             } label: {
-                Label("다음 학습지 풀기 (\(Day.label(next.id)))", systemImage: "arrow.right.circle.fill")
+                Label("다음 학습지 풀기 (\(next.title))", systemImage: "arrow.right.circle.fill")
                     .font(.headline)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 6)

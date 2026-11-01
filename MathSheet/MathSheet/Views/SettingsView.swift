@@ -9,8 +9,40 @@ struct SettingsView: View {
         NavigationStack {
             Form {
                 Section {
-                    Stepper("하루 문제 수: \(store.settings.problemsPerDay)문제",
+                    Picker("학습 방식", selection: $store.settings.studyMode) {
+                        Text("한 단원씩 반복").tag(StudyMode.chapter)
+                        Text("여러 단원 섞기").tag(StudyMode.mixed)
+                    }
+                    if store.settings.studyMode == .chapter {
+                        Picker("지금 공부할 단원", selection: currentUnit) {
+                            ForEach(store.settings.units) { u in
+                                Text("\(u.number). \(u.korean)").tag(u)
+                            }
+                        }
+                        Stepper("한 단원 기간: \(store.settings.chapterDays)일",
+                                value: $store.settings.chapterDays, in: 7...60)
+                        let p = store.settings.period(on: Day.today)
+                        Text("\(Day.short(p.start)) ~ \(Day.short(p.end))까지 \(store.settings.unit(on: Day.today).korean)")
+                            .font(.callout).foregroundStyle(.secondary)
+                    }
+                    Stepper("하루 학습지: \(store.settings.sheetsPerDay)장",
+                            value: $store.settings.sheetsPerDay, in: 1...10)
+                    Stepper("학습지 1장 문제 수: \(store.settings.problemsPerDay)문제",
                             value: $store.settings.problemsPerDay, in: 5...20)
+                    Picker("심화 문제", selection: $store.settings.challengePercent) {
+                        Text("없음").tag(0)
+                        Text("조금 (20%)").tag(20)
+                        Text("많이 (40%)").tag(40)
+                        Text("아주 많이 (60%)").tag(60)
+                        Text("심화만 (100%)").tag(100)
+                    }
+                } header: {
+                    Text("학습 계획")
+                } footer: {
+                    Text("한 단원씩 반복: 고른 단원만 정한 기간(기본 30일) 동안 매일 나와요. 기간이 끝나면 다음 단원으로 넘어가고, 마지막 단원 다음엔 처음 단원으로 돌아가 복습해요. 아래 단원 목록에서 끈 단원은 건너뛰어요.")
+                }
+
+                Section {
                     Toggle("주말은 쉬기 (토·일 학습지 없음)", isOn: $store.settings.skipWeekends)
                     Toggle("문제의 한국어 뜻 처음부터 펼쳐 보기", isOn: $store.settings.showKorean)
                     Toggle("연습장에 손가락으로도 쓰기", isOn: $store.settings.fingerDrawing)
@@ -58,6 +90,14 @@ struct SettingsView: View {
                 Button("모두 지우기", role: .destructive) { store.resetAll() }
             }
         }
+    }
+
+    /// 단원을 고르면 오늘부터 그 단원 기간이 새로 시작돼요.
+    private var currentUnit: Binding<MathUnit> {
+        Binding(
+            get: { store.settings.unit(on: Day.today) },
+            set: { store.startChapter($0) }
+        )
     }
 
     private func unitBinding(_ u: MathUnit) -> Binding<Bool> {

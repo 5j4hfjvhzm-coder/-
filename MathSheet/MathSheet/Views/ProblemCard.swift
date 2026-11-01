@@ -72,6 +72,13 @@ struct ProblemCard: View {
                 .foregroundStyle(.white)
                 .padding(.horizontal, 10).padding(.vertical, 4)
                 .background(Capsule().fill(problem.unit.color))
+            if problem.hard == true {
+                Text("★ 심화")
+                    .font(.caption.bold())
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 8).padding(.vertical, 3)
+                    .background(Capsule().fill(Color.purple))
+            }
             Text("Unit \(problem.unit.number) · \(problem.unit.english)")
                 .font(.caption)
                 .foregroundStyle(.secondary)
@@ -205,7 +212,17 @@ struct ProblemCard: View {
             }
 
             DisclosureGroup(isExpanded: $showWhy) {
-                TappableText(text: problem.explanation, font: .callout)
+                VStack(alignment: .leading, spacing: 8) {
+                    TappableText(text: problem.explanation, font: .callout)
+                    if let wk = problem.whyKo {
+                        Text(wk)
+                            .font(.callout)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(10)
+                            .background(RoundedRectangle(cornerRadius: 10).fill(Color.yellow.opacity(0.15)))
+                    }
+                }
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.top, 4)
             } label: {
