@@ -14,6 +14,7 @@ struct ProblemCard: View {
     @State private var retryResult: Bool?
     /// nil 이면 설정(한국어 뜻 펼쳐 보기)을 따라요
     @State private var showKo: Bool?
+    @State private var showPad: Bool
 
     private var koVisible: Bool { showKo ?? store.settings.showKorean }
 
@@ -24,6 +25,8 @@ struct ProblemCard: View {
         self.done = done
         self.focus = focus
         _text = State(initialValue: problem.userAnswer)
+        // 필기한 적이 있으면 연습장을 펼쳐 둬요
+        _showPad = State(initialValue: DrawingStore.exists(problem.id))
     }
 
     var body: some View {
@@ -37,6 +40,9 @@ struct ProblemCard: View {
                 ExprView(expr: e + " =")
                     .frame(maxWidth: .infinity, alignment: .center)
                     .padding(.vertical, 4)
+            }
+            if showPad {
+                ScratchPad(problemID: problem.id)
             }
             if problem.kind == .choice { choices } else { numberInput }
             if done { result }
@@ -76,6 +82,12 @@ struct ProblemCard: View {
                     .font(.title2)
                     .foregroundStyle(problem.correct == true ? .green : .red)
             }
+            Button { withAnimation { showPad.toggle() } } label: {
+                Image(systemName: showPad ? "pencil.circle.fill" : "pencil.circle")
+                    .font(.title2)
+            }
+            .buttonStyle(.borderless)
+            .accessibilityLabel(showPad ? "연습장 닫기" : "연습장 열기 (필기)")
             Button { Speech.shared.say(problem) } label: {
                 Image(systemName: "speaker.wave.2.fill")
             }

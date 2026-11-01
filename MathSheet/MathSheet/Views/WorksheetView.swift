@@ -81,7 +81,7 @@ struct WorksheetView: View {
                     .font(.subheadline).foregroundStyle(.secondary)
             } else {
                 Text("Daily Math Worksheet").font(.title3.bold())
-                Text("💡 모르는 영어 단어를 누르면 한국어 뜻이 나와요")
+                Text("💡 모르는 영어 단어를 누르면 한국어 뜻이 나와요 · ✏️ 를 누르면 연습장에 필기할 수 있어요")
                     .font(.callout).foregroundStyle(.secondary)
                 Text("Grade 5 · Semester 2  —  \(sheet.answeredCount) / \(sheet.problems.count) answered")
                     .font(.subheadline).foregroundStyle(.secondary)

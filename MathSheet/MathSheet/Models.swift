@@ -186,6 +186,8 @@ struct Settings: Codable, Equatable {
     var reminderMinutes = 17 * 60
     /// 문제의 한국어 뜻을 처음부터 펼쳐 둘지
     var showKorean = false
+    /// 연습장에 손가락으로도 쓸지 (끄면 Apple Pencil로만 쓰고 손가락은 스크롤)
+    var fingerDrawing = false
 
     init() {}
 
@@ -198,6 +200,7 @@ struct Settings: Codable, Equatable {
         reminderOn = (try? c.decode(Bool.self, forKey: .reminderOn)) ?? base.reminderOn
         reminderMinutes = (try? c.decode(Int.self, forKey: .reminderMinutes)) ?? base.reminderMinutes
         showKorean = (try? c.decode(Bool.self, forKey: .showKorean)) ?? base.showKorean
+        fingerDrawing = (try? c.decode(Bool.self, forKey: .fingerDrawing)) ?? base.fingerDrawing
     }
 }
 

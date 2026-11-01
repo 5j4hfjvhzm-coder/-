@@ -13,10 +13,11 @@ struct SettingsView: View {
                             value: $store.settings.problemsPerDay, in: 5...20)
                     Toggle("주말은 쉬기 (토·일 학습지 없음)", isOn: $store.settings.skipWeekends)
                     Toggle("문제의 한국어 뜻 처음부터 펼쳐 보기", isOn: $store.settings.showKorean)
+                    Toggle("연습장에 손가락으로도 쓰기", isOn: $store.settings.fingerDrawing)
                 } header: {
                     Text("학습지")
                 } footer: {
-                    Text("설정을 바꾸면 아직 한 문제도 안 푼 학습지에도 바로 적용돼요.")
+                    Text("설정을 바꾸면 아직 한 문제도 안 푼 학습지에도 바로 적용돼요. 손가락 쓰기를 끄면 연습장에는 Apple Pencil로만 쓰고, 손가락으로는 화면을 넘길 수 있어요.")
                 }
 
                 Section("단원 (5학년 2학기)") {

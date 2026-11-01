@@ -160,6 +160,7 @@ final class Store: ObservableObject {
 
     /// 모든 기록을 지우고 오늘부터 다시 시작
     func resetAll() {
+        DrawingStore.removeAll()
         sheets = []
         lastDay = nil
         refresh()
