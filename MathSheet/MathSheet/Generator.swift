@@ -67,8 +67,8 @@ enum Generator {
         ("Yuna", "유나"), ("Doyun", "도윤"), ("Juno", "주노"), ("Sora", "소라"), ("Taeyang", "태양"),
     ]
 
-    static func worksheet(day: String, number: Int = 1, settings: Settings) -> [Problem] {
-        let units = settings.units(on: day)
+    static func worksheet(day: String, number: Int = 1, settings: Settings, only: [MathUnit]? = nil) -> [Problem] {
+        let units = only ?? settings.units(on: day)
         let d = Dice(text: "\(day)#\(number)#\(settings.problemsPerDay)#\(units.map(\.rawValue).joined())")
         var slots: [MathUnit] = []
         while slots.count < settings.problemsPerDay { slots += d.shuffle(units) }
@@ -112,16 +112,16 @@ enum Generator {
     // MARK: - 만들기 도우미
 
     static func num(_ u: MathUnit, _ text: String, ko: String, expr: String? = nil, answer: String,
-                    unit: String? = nil, why: String) -> Problem {
+                    unit: String? = nil, why: String, whyKo: String? = nil) -> Problem {
         Problem(id: "", unit: u, kind: .number, text: text, expr: expr, answer: answer,
-                choices: nil, unitLabel: unit, explanation: why, ko: ko)
+                choices: nil, unitLabel: unit, explanation: why, ko: ko, whyKo: whyKo)
     }
 
     static func choice(_ u: MathUnit, _ text: String, ko: String, answer: String, wrong: [String],
-                       shuffle: Bool = true, d: Dice, why: String) -> Problem {
+                       shuffle: Bool = true, d: Dice, why: String, whyKo: String? = nil) -> Problem {
         let all = [answer] + wrong
         return Problem(id: "", unit: u, kind: .choice, text: text, expr: nil, answer: answer,
-                       choices: shuffle ? d.shuffle(all) : all, unitLabel: nil, explanation: why, ko: ko)
+                       choices: shuffle ? d.shuffle(all) : all, unitLabel: nil, explanation: why, ko: ko, whyKo: whyKo)
     }
 
     // MARK: - 1. 수의 범위와 어림하기
@@ -142,7 +142,8 @@ enum Generator {
             let loWhy = loIn ? "\"At least \(lo)\" includes \(lo)." : "\"Greater than \(lo)\" does not include \(lo)."
             let hiWhy = hiIn ? "\"At most \(hi)\" includes \(hi)." : "\"Less than \(hi)\" does not include \(hi)."
             let why = "\(loWhy) \(hiWhy) So the numbers are \(first), \(first + 1), …, \(last). That is \(count) numbers."
-            return num(u, text, ko: ko, answer: "\(count)", why: why)
+            let whyKo = "\(lo) \(loIn ? "이상" : "초과")에는 \(josa("\(lo)", "이", "가")) \(loIn ? "들어가고" : "들어가지 않고"), \(hi) \(hiIn ? "이하" : "미만")에는 \(josa("\(hi)", "이", "가")) \(hiIn ? "들어가요" : "들어가지 않아요"). 그래서 \(first), \(first + 1), …, \(last) → 모두 \(count)개예요."
+            return num(u, text, ko: ko, answer: "\(count)", why: why, whyKo: whyKo)
 
         case 1:
             // 범위에 들어가는 수 고르기 (경계값 함정 포함)
@@ -168,9 +169,10 @@ enum Generator {
             case 2: rule = "\"Greater than \(t)\" means more than \(t), so \(t) itself is NOT included."
             default: rule = "\"Less than \(t)\" means smaller than \(t), so \(t) itself is NOT included."
             }
+            let whyKo = [ "\(t) 이상은 \(josa("\(t)", "과", "와")) 같거나 큰 수라서 \(josa("\(t)", "이", "가")) 들어가요.", "\(t) 이하는 \(josa("\(t)", "과", "와")) 같거나 작은 수라서 \(josa("\(t)", "이", "가")) 들어가요.", "\(t) 초과는 \(t)보다 큰 수라서 \(josa("\(t)", "은", "는")) 들어가지 않아요.", "\(t) 미만은 \(t)보다 작은 수라서 \(josa("\(t)", "은", "는")) 들어가지 않아요." ][kind] + " 답: \(correct)"
             return choice(u, "Which number is \(phrase) \(t)?", ko: "\(t) \(phraseKo)인 수는 어느 것인가요?",
                           answer: "\(correct)", wrong: wrong.map { "\($0)" }, d: d,
-                          why: rule + " The answer is \(correct).")
+                          why: rule + " The answer is \(correct).", whyKo: whyKo)
 
         case 2, 3:
             // 자연수 올림·버림·반올림
@@ -184,20 +186,23 @@ enum Generator {
             switch d.int(0...2) {
             case 0:
                 let a = (n + place - 1) / place * place
+                let whyKo = "올림: \(placeKo)의 자리 아래에 0이 아닌 숫자가 있으면 \(placeKo)의 자리 숫자를 1 크게 하고, 그 아래 자리는 모두 0으로 해요. \(comma(n)) → \(comma(a))"
                 return num(u, "Round up \(comma(n)) to the \(placeName) place.",
                            ko: "\(nKo) 올림하여 \(placeKo)의 자리까지 나타내세요.", answer: comma(a),
-                           why: "Rounding up: if any digit below the \(placeName) place is not 0, add 1 to the \(placeName) digit and change the digits below it to 0. \(comma(n)) → \(comma(a)).")
+                           why: "Rounding up: if any digit below the \(placeName) place is not 0, add 1 to the \(placeName) digit and change the digits below it to 0. \(comma(n)) → \(comma(a)).", whyKo: whyKo)
             case 1:
                 let a = n / place * place
+                let whyKo = "버림: \(placeKo)의 자리 아래 숫자를 모두 0으로 해요. \(comma(n)) → \(comma(a))"
                 return num(u, "Round down \(comma(n)) to the \(placeName) place.",
                            ko: "\(nKo) 버림하여 \(placeKo)의 자리까지 나타내세요.", answer: comma(a),
-                           why: "Rounding down: change all the digits below the \(placeName) place to 0. \(comma(n)) → \(comma(a)).")
+                           why: "Rounding down: change all the digits below the \(placeName) place to 0. \(comma(n)) → \(comma(a)).", whyKo: whyKo)
             default:
                 let a = (n + place / 2) / place * place
                 let how = digitBelow >= 5 ? "It is 5 or more, so round up" : "It is less than 5, so round down"
+                let whyKo = "\(["ones": "일", "tens": "십", "hundreds": "백"][below] ?? "")의 자리 숫자가 \(digitBelow)이므로 \(digitBelow >= 5 ? "올려요" : "버려요"). (5 이상이면 올리고, 5 미만이면 버려요.) \(comma(n)) → \(comma(a))"
                 return num(u, "Round \(comma(n)) to the nearest \(nearestName).",
                            ko: "\(nKo) 반올림하여 \(placeKo)의 자리까지 나타내세요.", answer: comma(a),
-                           why: "Look at the \(below) digit: \(digitBelow). \(how). \(comma(n)) → \(comma(a)).")
+                           why: "Look at the \(below) digit: \(digitBelow). \(how). \(comma(n)) → \(comma(a)).", whyKo: whyKo)
             }
 
         case 4:
@@ -215,20 +220,23 @@ enum Generator {
             switch d.int(0...2) {
             case 0:
                 let a = (v + step - 1) / step * step
+                let whyKo = "올림: \(placeKo) 아래에 0이 아닌 숫자가 있으므로 \(placeKo)의 숫자를 1 크게 하고 나머지는 버려요. \(x) → \(dec(a, 3))"
                 return num(u, "Round up \(x) to the \(placeName).", ko: "\(xKo) 올림하여 \(placeKo)까지 나타내세요.",
                            answer: dec(a, 3),
-                           why: "Rounding up: the digits after the \(toTenths ? "tenths" : "hundredths") place are not all 0, so add 1 to that place and drop the rest. \(x) → \(dec(a, 3)).")
+                           why: "Rounding up: the digits after the \(toTenths ? "tenths" : "hundredths") place are not all 0, so add 1 to that place and drop the rest. \(x) → \(dec(a, 3)).", whyKo: whyKo)
             case 1:
                 let a = v / step * step
+                let whyKo = "버림: \(placeKo) 아래의 숫자를 모두 버려요. \(x) → \(dec(a, 3))"
                 return num(u, "Round down \(x) to the \(placeName).", ko: "\(xKo) 버림하여 \(placeKo)까지 나타내세요.",
                            answer: dec(a, 3),
-                           why: "Rounding down: drop all the digits after the \(toTenths ? "tenths" : "hundredths") place. \(x) → \(dec(a, 3)).")
+                           why: "Rounding down: drop all the digits after the \(toTenths ? "tenths" : "hundredths") place. \(x) → \(dec(a, 3)).", whyKo: whyKo)
             default:
                 let a = (v + step / 2) / step * step
                 let how = digitBelow >= 5 ? "It is 5 or more, so round up" : "It is less than 5, so round down"
+                let whyKo = "\(toTenths ? "소수 둘째 자리" : "소수 셋째 자리") 숫자가 \(digitBelow)이므로 \(digitBelow >= 5 ? "올려요" : "버려요"). (5 이상이면 올리고, 5 미만이면 버려요.) \(x) → \(dec(a, 3))"
                 return num(u, "Round \(x) to the \(placeName).", ko: "\(xKo) 반올림하여 \(placeKo)까지 나타내세요.",
                            answer: dec(a, 3),
-                           why: "Look at the \(belowName) digit: \(digitBelow). \(how). \(x) → \(dec(a, 3)).")
+                           why: "Look at the \(belowName) digit: \(digitBelow). \(how). \(x) → \(dec(a, 3)).", whyKo: whyKo)
             }
 
         default:
@@ -240,26 +248,29 @@ enum Generator {
                 var need = d.int(120...980)
                 if need % pack == 0 { need += 7 }
                 let buy = (need + pack - 1) / pack * pack
+                let whyKo = "묶음을 나눠서 살 수는 없으니 \(josa("\(need)", "을", "를")) 올림하여 \(pack == 10 ? "십" : "백")의 자리까지 나타내요: \(comma(buy))자루"
                 return num(u, "Pencils are sold only in packs of \(pack). \(name) needs \(need) pencils. What is the smallest number of pencils \(name) has to buy?",
                            ko: "연필은 \(pack)자루씩 묶음으로만 팔아요. \(josa(nk, "은", "는")) 연필이 \(need)자루 필요해요. 연필을 적어도 몇 자루 사야 하나요?",
                            answer: comma(buy), unit: "pencils",
-                           why: "\(name) can't buy part of a pack, so round UP \(need) to the \(pack == 10 ? "tens" : "hundreds") place: \(comma(buy)) pencils.")
+                           why: "\(name) can't buy part of a pack, so round UP \(need) to the \(pack == 10 ? "tens" : "hundreds") place: \(comma(buy)) pencils.", whyKo: whyKo)
             case 1:
                 var money = d.int(1100...9900)
                 if money % 1000 == 0 { money += 300 }
                 let bills = money / 1000 * 1000
+                let whyKo = "1,000원이 안 되는 돈은 1,000원짜리 지폐로 바꿀 수 없으니 버림하여 천의 자리까지 나타내요: \(comma(bills))원"
                 return num(u, "\(name) has \(comma(money)) won in coins. \(name) wants to change the coins into 1,000-won bills. At most how many won can \(name) get in 1,000-won bills?",
                            ko: "\(josa(nk, "은", "는")) 동전으로 \(comma(money))원을 가지고 있어요. 동전을 1,000원짜리 지폐로 바꾸려고 해요. 1,000원짜리 지폐로 최대 얼마까지 바꿀 수 있나요?",
                            answer: comma(bills), unit: "won",
-                           why: "Money less than 1,000 won can't become a 1,000-won bill, so round DOWN to the thousands place: \(comma(bills)) won.")
+                           why: "Money less than 1,000 won can't become a 1,000-won bill, so round DOWN to the thousands place: \(comma(bills)) won.", whyKo: whyKo)
             default:
                 var crowd = d.int(101...399)
                 if crowd % 10 == 0 { crowd += 3 }
                 let trips = (crowd + 9) / 10
+                let whyKo = "\(josa("\(crowd)", "을", "를")) 올림하여 십의 자리까지 나타내면 \(trips * 10)이에요. \(trips * 10) ÷ 10 = \(trips)번 건너야 마지막 사람들도 탈 수 있어요."
                 return num(u, "A boat can carry 10 people at a time. \(crowd) people want to cross the river. At least how many trips does the boat need to make?",
                            ko: "배 한 척에 한 번에 10명이 탈 수 있어요. \(crowd)명이 강을 건너려고 해요. 배는 적어도 몇 번 건너야 하나요?",
                            answer: "\(trips)", unit: "trips",
-                           why: "Round UP \(crowd) to the tens place: \(trips * 10). Then \(trips * 10) ÷ 10 = \(trips) trips, so the last few people also get a ride.")
+                           why: "Round UP \(crowd) to the tens place: \(trips * 10). Then \(trips * 10) ÷ 10 = \(trips) trips, so the last few people also get a ride.", whyKo: whyKo)
             }
         }
     }
@@ -283,37 +294,43 @@ enum Generator {
             let f = d.properFraction()
             let a = Frac(w) * f
             if d.bool() {
+                let whyKo = "자연수와 분자를 곱하고 분모는 그대로 둬요: \(w) × \(f.n)/\(f.d) = (\(w) × \(f.n))/\(f.d) = \(tail(w * f.n, f.d))"
                 return num(u, calc, ko: calcKo, expr: "\(w) × \(f.improper)", answer: a.mixed,
-                           why: "\(w) × \(f.n)/\(f.d) = (\(w) × \(f.n))/\(f.d) = \(tail(w * f.n, f.d))")
+                           why: "\(w) × \(f.n)/\(f.d) = (\(w) × \(f.n))/\(f.d) = \(tail(w * f.n, f.d))", whyKo: whyKo)
             } else {
+                let whyKo = "분자와 자연수를 곱하고 분모는 그대로 둬요: \(f.n)/\(f.d) × \(w) = (\(f.n) × \(w))/\(f.d) = \(tail(w * f.n, f.d))"
                 return num(u, calc, ko: calcKo, expr: "\(f.improper) × \(w)", answer: a.mixed,
-                           why: "\(f.n)/\(f.d) × \(w) = (\(f.n) × \(w))/\(f.d) = \(tail(w * f.n, f.d))")
+                           why: "\(f.n)/\(f.d) × \(w) = (\(f.n) × \(w))/\(f.d) = \(tail(w * f.n, f.d))", whyKo: whyKo)
             }
         case 1:
             let f = d.properFraction(), g = d.properFraction()
             let a = f * g
+            let whyKo = "분자는 분자끼리, 분모는 분모끼리 곱해요: (\(f.n) × \(g.n))/(\(f.d) × \(g.d)) = \(tail(f.n * g.n, f.d * g.d))"
             return num(u, calc, ko: calcKo, expr: "\(f.improper) × \(g.improper)", answer: a.mixed,
-                       why: "Multiply the numerators and the denominators: (\(f.n) × \(g.n))/(\(f.d) × \(g.d)) = \(tail(f.n * g.n, f.d * g.d))")
+                       why: "Multiply the numerators and the denominators: (\(f.n) × \(g.n))/(\(f.d) × \(g.d)) = \(tail(f.n * g.n, f.d * g.d))", whyKo: whyKo)
         case 2:
             let whole = d.int(1...3)
             let p = d.properFraction(maxDen: 6)
             let mixed = Frac(whole * p.d + p.n, p.d)
             let w = d.int(2...6)
             let a = mixed * Frac(w)
+            let whyKo = "대분수를 가분수로 바꿔요: \(mixed.mixed) = \(mixed.improper). 그다음 \(mixed.improper) × \(w) = \(tail(mixed.n * w, mixed.d))"
             return num(u, calc, ko: calcKo, expr: "\(mixed.mixed) × \(w)", answer: a.mixed,
-                       why: "Change the mixed number to an improper fraction: \(mixed.mixed) = \(mixed.improper). Then \(mixed.improper) × \(w) = \(tail(mixed.n * w, mixed.d))")
+                       why: "Change the mixed number to an improper fraction: \(mixed.mixed) = \(mixed.improper). Then \(mixed.improper) × \(w) = \(tail(mixed.n * w, mixed.d))", whyKo: whyKo)
         case 3:
             let p = d.properFraction(maxDen: 5), q = d.properFraction(maxDen: 5)
             let x = Frac(d.int(1...2) * p.d + p.n, p.d)
             let y = Frac(d.int(1...2) * q.d + q.n, q.d)
             let a = x * y
+            let whyKo = "두 대분수를 가분수로 바꿔요: \(x.mixed) = \(x.improper), \(y.mixed) = \(y.improper). 그다음 분자끼리, 분모끼리 곱해요: (\(x.n) × \(y.n))/(\(x.d) × \(y.d)) = \(tail(x.n * y.n, x.d * y.d))"
             return num(u, calc, ko: calcKo, expr: "\(x.mixed) × \(y.mixed)", answer: a.mixed,
-                       why: "Change to improper fractions: \(x.mixed) = \(x.improper), \(y.mixed) = \(y.improper). Then (\(x.n) × \(y.n))/(\(x.d) × \(y.d)) = \(tail(x.n * y.n, x.d * y.d))")
+                       why: "Change to improper fractions: \(x.mixed) = \(x.improper), \(y.mixed) = \(y.improper). Then (\(x.n) × \(y.n))/(\(x.d) × \(y.d)) = \(tail(x.n * y.n, x.d * y.d))", whyKo: whyKo)
         case 4:
             let f = d.properFraction(maxDen: 6), g = d.properFraction(maxDen: 6), h = d.properFraction(maxDen: 6)
             let a = f * g * h
+            let whyKo = "세 분수의 분자끼리, 분모끼리 곱해요: (\(f.n) × \(g.n) × \(h.n))/(\(f.d) × \(g.d) × \(h.d)) = \(tail(f.n * g.n * h.n, f.d * g.d * h.d))"
             return num(u, calc, ko: calcKo, expr: "\(f.improper) × \(g.improper) × \(h.improper)", answer: a.mixed,
-                       why: "Multiply all the numerators and all the denominators: (\(f.n) × \(g.n) × \(h.n))/(\(f.d) × \(g.d) × \(h.d)) = \(tail(f.n * g.n * h.n, f.d * g.d * h.d))")
+                       why: "Multiply all the numerators and all the denominators: (\(f.n) × \(g.n) × \(h.n))/(\(f.d) × \(g.d) × \(h.d)) = \(tail(f.n * g.n * h.n, f.d * g.d * h.d))", whyKo: whyKo)
         default:
             let (name, nk) = d.pick(people)
             switch d.int(0...3) {
@@ -322,34 +339,38 @@ enum Generator {
                 var n = d.int(1...(den - 1))
                 while Frac.gcd(n, den) != 1 { n = d.int(1...(den - 1)) }
                 let a = 60 * n / den
+                let whyKo = "1시간 = 60분이므로 60 × \(n)/\(den) = (60 × \(n))/\(den) = \(60 * n)/\(den) = \(a)분"
                 return num(u, "There are 60 minutes in 1 hour. How many minutes are in \(n)/\(den) of an hour?",
                            ko: "1시간은 60분이에요. \(n)/\(den)시간은 몇 분인가요?",
                            answer: "\(a)", unit: "minutes",
-                           why: "60 × \(n)/\(den) = (60 × \(n))/\(den) = \(60 * n)/\(den) = \(a) minutes")
+                           why: "60 × \(n)/\(den) = (60 × \(n))/\(den) = \(60 * n)/\(den) = \(a) minutes", whyKo: whyKo)
             case 1:
                 let w = d.int(2...9)
                 let f = d.properFraction()
                 let a = Frac(w) * f
+                let whyKo = "\(w) m의 \(f.improper)는 \(w) × \(f.improper) = \(tail(w * f.n, f.d)) m"
                 return num(u, "A ribbon is \(w) m long. \(name) used \(f.improper) of the ribbon. How many meters of ribbon did \(name) use?",
                            ko: "리본이 \(w) m 있어요. \(josa(nk, "은", "는")) 리본의 \(f.improper)만큼 사용했어요. \(josa(nk, "이", "가")) 사용한 리본은 몇 m인가요?",
                            answer: a.mixed, unit: "m",
-                           why: "\(f.improper) of \(w) m means \(w) × \(f.improper) = \(tail(w * f.n, f.d)) m")
+                           why: "\(f.improper) of \(w) m means \(w) × \(f.improper) = \(tail(w * f.n, f.d)) m", whyKo: whyKo)
             case 2:
                 let f = d.properFraction(maxDen: 8), g = d.properFraction(maxDen: 6)
                 let a = f * g
+                let whyKo = "\(f.improper) L의 \(g.improper)는 \(f.improper) × \(g.improper) = \(tail(f.n * g.n, f.d * g.d)) L"
                 return num(u, "There is \(f.improper) L of milk. \(name) drank \(g.improper) of it. How many liters of milk did \(name) drink?",
                            ko: "우유가 \(f.improper) L 있어요. \(josa(nk, "은", "는")) 그중 \(g.improper)만큼 마셨어요. \(josa(nk, "이", "가")) 마신 우유는 몇 L인가요?",
                            answer: a.mixed, unit: "L",
-                           why: "\(g.improper) of \(f.improper) L means \(f.improper) × \(g.improper) = \(tail(f.n * g.n, f.d * g.d)) L")
+                           why: "\(g.improper) of \(f.improper) L means \(f.improper) × \(g.improper) = \(tail(f.n * g.n, f.d * g.d)) L", whyKo: whyKo)
             default:
                 let p = d.properFraction(maxDen: 4)
                 let len = Frac(d.int(1...3) * p.d + p.n, p.d)
                 let wid = d.properFraction(maxDen: 5)
                 let a = len * wid
+                let whyKo = "직사각형의 넓이 = 가로 × 세로 = \(len.mixed) × \(wid.improper) = \(len.improper) × \(wid.improper) = \(tail(len.n * wid.n, len.d * wid.d)) m²"
                 return num(u, "A rectangle is \(len.mixed) m long and \(wid.improper) m wide. What is its area?",
                            ko: "가로가 \(len.mixed) m, 세로가 \(wid.improper) m인 직사각형이 있어요. 이 직사각형의 넓이는 몇 m²인가요?",
                            answer: a.mixed, unit: "m²",
-                           why: "Area = length × width = \(len.mixed) × \(wid.improper) = \(len.improper) × \(wid.improper) = \(tail(len.n * wid.n, len.d * wid.d)) m²")
+                           why: "Area = length × width = \(len.mixed) × \(wid.improper) = \(len.improper) × \(wid.improper) = \(tail(len.n * wid.n, len.d * wid.d)) m²", whyKo: whyKo)
             }
         }
     }
@@ -369,31 +390,35 @@ enum Generator {
             } while !(a + b > c && b + c > a && a + c > b) || a == b || b == c || a == c
             let sides = [("DE", "AB", a), ("EF", "BC", b), ("FD", "CA", c)]
             let (ask, from, len) = d.pick(sides)
+            let whyKo = "합동인 도형에서 대응변의 길이는 같아요. 변 \(ask)의 대응변은 변 \(from)이므로 \(ask) = \(len) cm"
             return num(u, "Triangle ABC and triangle DEF are congruent. \(match) AB = \(a) cm, BC = \(b) cm, and CA = \(c) cm. What is the length of side \(ask)?",
                        ko: "\(triKo) AB = \(a) cm, BC = \(b) cm, CA = \(c) cm예요. 변 \(ask)의 길이는 몇 cm인가요?",
                        answer: "\(len)", unit: "cm",
-                       why: "In congruent figures, corresponding sides have the same length. Side \(ask) corresponds to side \(from), so \(ask) = \(len) cm.")
+                       why: "In congruent figures, corresponding sides have the same length. Side \(ask) corresponds to side \(from), so \(ask) = \(len) cm.", whyKo: whyKo)
         case 1:
             let b = d.int(40...80), c = d.int(30...70)
             let a = 180 - b - c
             if d.bool() {
+                let whyKo = "각 D의 대응각은 각 A예요. 삼각형의 세 각의 합은 180°이므로 각 A = 180° − \(b)° − \(c)° = \(a)°. 그래서 각 D = \(a)°"
                 return num(u, "Triangle ABC and triangle DEF are congruent. \(match) Angle B = \(b)° and angle C = \(c)°. What is the size of angle D?",
                            ko: "\(triKo) 각 B = \(b)°, 각 C = \(c)°예요. 각 D의 크기는 몇 도인가요?",
                            answer: "\(a)", unit: "°",
-                           why: "Angle D corresponds to angle A. The three angles of a triangle add up to 180°, so angle A = 180° − \(b)° − \(c)° = \(a)°. So angle D = \(a)°.")
+                           why: "Angle D corresponds to angle A. The three angles of a triangle add up to 180°, so angle A = 180° − \(b)° − \(c)° = \(a)°. So angle D = \(a)°.", whyKo: whyKo)
             } else {
+                let whyKo = "각 F의 대응각은 각 C예요. 각 C = 180° − \(a)° − \(b)° = \(c)°. 그래서 각 F = \(c)°"
                 return num(u, "Triangle ABC and triangle DEF are congruent. \(match) Angle A = \(a)° and angle B = \(b)°. What is the size of angle F?",
                            ko: "\(triKo) 각 A = \(a)°, 각 B = \(b)°예요. 각 F의 크기는 몇 도인가요?",
                            answer: "\(c)", unit: "°",
-                           why: "Angle F corresponds to angle C. Angle C = 180° − \(a)° − \(b)° = \(c)°. So angle F = \(c)°.")
+                           why: "Angle F corresponds to angle C. Angle C = 180° − \(a)° − \(b)° = \(c)°. So angle F = \(c)°.", whyKo: whyKo)
             }
         case 2:
             let s = (0..<4).map { _ in d.int(3...12) }
             let total = s.reduce(0, +)
+            let whyKo = "합동인 도형은 대응변의 길이가 같아서 둘레도 같아요: \(s[0]) + \(s[1]) + \(s[2]) + \(s[3]) = \(total) cm"
             return num(u, "Quadrilateral ABCD and quadrilateral EFGH are congruent. The sides of ABCD are AB = \(s[0]) cm, BC = \(s[1]) cm, CD = \(s[2]) cm, and DA = \(s[3]) cm. What is the perimeter of EFGH?",
                        ko: "사각형 ABCD와 사각형 EFGH는 서로 합동이에요. 사각형 ABCD의 변의 길이는 AB = \(s[0]) cm, BC = \(s[1]) cm, CD = \(s[2]) cm, DA = \(s[3]) cm예요. 사각형 EFGH의 둘레는 몇 cm인가요?",
                        answer: "\(total)", unit: "cm",
-                       why: "Congruent figures have sides of the same lengths, so the perimeter is the same: \(s[0]) + \(s[1]) + \(s[2]) + \(s[3]) = \(total) cm.")
+                       why: "Congruent figures have sides of the same lengths, so the perimeter is the same: \(s[0]) + \(s[1]) + \(s[2]) + \(s[3]) = \(total) cm.", whyKo: whyKo)
         case 3:
             let shapes: [(String, String, Int, String)] = [
                 ("a square", "정사각형", 4, "A square has 4 lines of symmetry: 2 through the middles of opposite sides and 2 diagonals."),
@@ -406,51 +431,68 @@ enum Generator {
                 ("a rhombus that is not a square", "정사각형이 아닌 마름모", 2, "A rhombus has 2 lines of symmetry: its two diagonals."),
             ]
             let (name, nameKo, n, why) = d.pick(shapes)
+            let shapeWhyKo: [String: String] = [
+                "정사각형": "정사각형은 대칭축이 4개예요: 마주 보는 변의 가운데를 지나는 선 2개와 대각선 2개.",
+                "정사각형이 아닌 직사각형": "직사각형은 마주 보는 변의 가운데를 지나는 대칭축이 2개 있어요. 대각선은 대칭축이 아니에요.",
+                "정삼각형": "정삼각형은 각 꼭짓점에서 마주 보는 변의 가운데로 그은 대칭축이 3개 있어요.",
+                "정오각형": "정다각형은 변의 수만큼 대칭축이 있어요. 정오각형은 5개예요.",
+                "정육각형": "정다각형은 변의 수만큼 대칭축이 있어요. 정육각형은 6개예요.",
+                "정팔각형": "정다각형은 변의 수만큼 대칭축이 있어요. 정팔각형은 8개예요.",
+                "이등변삼각형(정삼각형이 아닌)": "이등변삼각형은 길이가 같은 두 변 사이의 꼭짓점을 지나는 대칭축이 1개 있어요.",
+                "정사각형이 아닌 마름모": "마름모는 두 대각선이 대칭축이에요. 모두 2개예요.",
+            ]
+            let whyKo = shapeWhyKo[nameKo] ?? ""
             return num(u, "How many lines of symmetry does \(name) have?", ko: "\(nameKo)의 대칭축은 몇 개인가요?",
-                       answer: "\(n)", unit: "lines", why: why)
+                       answer: "\(n)", unit: "lines", why: why, whyKo: whyKo)
         case 4:
             if d.bool() {
                 let yes = ["A", "M", "T", "U", "V", "W", "Y"]
                 let no = ["F", "G", "J", "L", "P", "R", "N", "S", "Z"]
                 let ans = d.pick(yes)
+                let whyKo = "\(ans)는 가운데를 지나는 선을 따라 접으면 완전히 겹쳐요. 다른 글자는 그렇게 접을 수 없어요."
                 return choice(u, "Which capital letter is line-symmetric (has a line of symmetry)?",
                               ko: "선대칭인(대칭축이 있는) 알파벳 대문자는 어느 것인가요?", answer: ans,
                               wrong: Array(d.shuffle(no).prefix(3)), d: d,
-                              why: "If you fold \(ans) along a line down its middle, the two halves match exactly. The other letters can't be folded that way.")
+                              why: "If you fold \(ans) along a line down its middle, the two halves match exactly. The other letters can't be folded that way.", whyKo: whyKo)
             } else {
                 let yes = ["N", "S", "Z"]
                 let no = ["A", "T", "M", "U", "V", "F", "L", "P", "R", "K", "E", "C"]
                 let ans = d.pick(yes)
+                let whyKo = "\(ans)는 가운데를 중심으로 180° 돌려도 처음과 똑같은 모양이에요. 다른 글자는 반 바퀴 돌리면 모양이 달라져요."
                 return choice(u, "Which capital letter is point-symmetric?",
                               ko: "점대칭인 알파벳 대문자는 어느 것인가요?", answer: ans,
                               wrong: Array(d.shuffle(no).prefix(3)), d: d,
-                              why: "If you turn \(ans) 180° around its center, it looks exactly the same. The other letters look different after a half turn.")
+                              why: "If you turn \(ans) 180° around its center, it looks exactly the same. The other letters look different after a half turn.", whyKo: whyKo)
             }
         case 5:
             let yes = ["a parallelogram", "a rectangle", "a regular hexagon", "a rhombus"]
             let no = ["an equilateral triangle", "a regular pentagon", "an isosceles triangle", "a trapezoid (not a parallelogram)"]
             let ans = d.pick(yes)
+            let whyKo = "\(josa(Glossary.choiceKo[ans] ?? ans, "은", "는")) 중심을 기준으로 180° 돌려도 같은 모양이에요. 삼각형, 정오각형, 사다리꼴은 그렇지 않아요."
             return choice(u, "Which shape is point-symmetric?", ko: "점대칭도형은 어느 것인가요?", answer: ans,
                           wrong: Array(d.shuffle(no).prefix(3)), d: d,
-                          why: "\(ans.prefix(1).uppercased() + String(ans.dropFirst())) looks the same after a 180° turn around its center. Triangles, regular pentagons, and trapezoids like that do not.")
+                          why: "\(ans.prefix(1).uppercased() + String(ans.dropFirst())) looks the same after a 180° turn around its center. Triangles, regular pentagons, and trapezoids like that do not.", whyKo: whyKo)
         default:
             let k = d.int(2...12)
             switch d.int(0...2) {
             case 0:
+                let whyKo = "대응점은 대칭축에서 같은 거리만큼 반대쪽에 있어요. 그래서 \(k) × 2 = \(2 * k) cm"
                 return num(u, "In a line-symmetric figure, point A is \(k) cm away from the line of symmetry. How far apart are point A and its corresponding point?",
                            ko: "선대칭도형에서 점 A는 대칭축에서 \(k) cm 떨어져 있어요. 점 A와 그 대응점 사이의 거리는 몇 cm인가요?",
                            answer: "\(2 * k)", unit: "cm",
-                           why: "Corresponding points are the same distance from the line of symmetry, on opposite sides. So the distance is \(k) × 2 = \(2 * k) cm.")
+                           why: "Corresponding points are the same distance from the line of symmetry, on opposite sides. So the distance is \(k) × 2 = \(2 * k) cm.", whyKo: whyKo)
             case 1:
+                let whyKo = "대칭의 중심은 대응점을 이은 선분을 반으로 나눠요: \(2 * k) ÷ 2 = \(k) cm"
                 return num(u, "In a point-symmetric figure, the segment joining point A and its corresponding point is \(2 * k) cm long. How far is point A from the center of symmetry?",
                            ko: "점대칭도형에서 점 A와 그 대응점을 이은 선분의 길이는 \(2 * k) cm예요. 점 A에서 대칭의 중심까지의 거리는 몇 cm인가요?",
                            answer: "\(k)", unit: "cm",
-                           why: "The center of symmetry cuts the segment between corresponding points in half: \(2 * k) ÷ 2 = \(k) cm.")
+                           why: "The center of symmetry cuts the segment between corresponding points in half: \(2 * k) ÷ 2 = \(k) cm.", whyKo: whyKo)
             default:
+                let whyKo = "대응점을 이은 선분은 대칭축과 항상 수직으로 만나요. 그래서 90°예요."
                 return num(u, "In a line-symmetric figure, the segment joining two corresponding points meets the line of symmetry. What angle do they make?",
                            ko: "선대칭도형에서 두 대응점을 이은 선분은 대칭축과 만나요. 이때 이루는 각은 몇 도인가요?",
                            answer: "90", unit: "°",
-                           why: "The line of symmetry is always perpendicular to the segment joining corresponding points, so the angle is 90°.")
+                           why: "The line of symmetry is always perpendicular to the segment joining corresponding points, so the angle is 90°.", whyKo: whyKo)
             }
         }
     }
@@ -473,6 +515,13 @@ enum Generator {
         return "First multiply as whole numbers: \(xi) × \(yi) = \(xi * yi). The numbers have \(count) in total, so the answer has \(placesText(p)): \(raw)\(raw == trimmed ? "" : " = \(trimmed)")."
     }
 
+    private static func productWhyKo(_ xi: Int, _ yi: Int, _ p: Int, _ px: Int, _ py: Int) -> String {
+        let raw = dec(xi * yi, p, trim: false)
+        let trimmed = dec(xi * yi, p)
+        let count = (px > 0 && py > 0) ? "\(px) + \(py) = \(p)자리" : "\(p)자리"
+        return "먼저 자연수처럼 곱해요: \(xi) × \(yi) = \(xi * yi). 곱하는 수의 소수점 아래 자리 수가 모두 \(count)이므로 답도 소수 \(p)자리예요: \(raw)\(raw == trimmed ? "" : " = \(trimmed)")"
+    }
+
     static func decimal(_ d: Dice) -> Problem {
         let u = MathUnit.decimalMul
         let calc = "Calculate."
@@ -482,20 +531,23 @@ enum Generator {
             let p = d.int(1...2)
             let a = nz(d, p == 1 ? 2...99 : 11...499)
             let w = d.int(2...9)
+            let whyKo = productWhyKo(a, w, p, p, 0)
             return num(u, calc, ko: calcKo, expr: "\(dec(a, p)) × \(w)", answer: dec(a * w, p),
-                       why: productWhy(a, w, p, p, 0))
+                       why: productWhy(a, w, p, p, 0), whyKo: whyKo)
         case 1:
             let p = d.int(1...2)
             let a = nz(d, p == 1 ? 2...49 : 11...99)
             let w = d.int(3...25)
+            let whyKo = productWhyKo(w, a, p, 0, p)
             return num(u, calc, ko: calcKo, expr: "\(w) × \(dec(a, p))", answer: dec(a * w, p),
-                       why: productWhy(w, a, p, 0, p))
+                       why: productWhy(w, a, p, 0, p), whyKo: whyKo)
         case 2:
             let pa = d.int(1...2)
             let a = nz(d, pa == 1 ? 2...99 : 11...299)
             let b = nz(d, 2...49)
+            let whyKo = productWhyKo(a, b, pa + 1, pa, 1)
             return num(u, calc, ko: calcKo, expr: "\(dec(a, pa)) × \(dec(b, 1))", answer: dec(a * b, pa + 1),
-                       why: productWhy(a, b, pa + 1, pa, 1))
+                       why: productWhy(a, b, pa + 1, pa, 1), whyKo: whyKo)
         case 3:
             if d.bool() {
                 let a = nz(d, 101...9999)
@@ -504,48 +556,54 @@ enum Generator {
                 let shift = String(m).count - 1
                 let x = dec(a, p)
                 let ans = dec(a * m, p)
+                let whyKo = "\(josa(comma(m), "을", "를")) 곱하면 소수점이 오른쪽으로 \(shift)칸 옮겨져요: \(x) → \(ans)"
                 return num(u, calc, ko: calcKo, expr: "\(x) × \(comma(m))", answer: ans,
-                           why: "Multiplying by \(comma(m)) moves the decimal point \(shift) place\(shift == 1 ? "" : "s") to the RIGHT: \(x) → \(ans).")
+                           why: "Multiplying by \(comma(m)) moves the decimal point \(shift) place\(shift == 1 ? "" : "s") to the RIGHT: \(x) → \(ans).", whyKo: whyKo)
             } else {
                 let w = nz(d, 2...9999)
                 let k = d.int(1...3)
                 let m = dec(1, k)
                 let ans = dec(w, k)
+                let whyKo = "\(josa(m, "을", "를")) 곱하면 소수점이 왼쪽으로 \(k)칸 옮겨져요: \(w) → \(ans)"
                 return num(u, calc, ko: calcKo, expr: "\(w) × \(m)", answer: ans,
-                           why: "Multiplying by \(m) moves the decimal point \(k) place\(k == 1 ? "" : "s") to the LEFT: \(w) → \(ans).")
+                           why: "Multiplying by \(m) moves the decimal point \(k) place\(k == 1 ? "" : "s") to the LEFT: \(w) → \(ans).", whyKo: whyKo)
             }
         case 4:
             let a = nz(d, 11...99), b = nz(d, 11...99)
             let pa = d.int(0...2), pb = d.int(1...2)
             let x = dec(a, pa), y = dec(b, pb)
             let ans = dec(a * b, pa + pb)
+            let whyKo = "곱하는 두 수의 소수점 아래 자리 수를 더하면 \(pa) + \(pb) = \(pa + pb)자리예요. \(a * b)에서 소수점을 왼쪽으로 \(pa + pb)칸 옮기면 \(ans)"
             return num(u, "\(a) × \(b) = \(a * b). Use this to find the answer.",
                        ko: "\(a) × \(b) = \(josa("\(a * b)", "이에요", "예요")). 이것을 이용하여 계산하세요.",
                        expr: "\(x) × \(y)", answer: ans,
-                       why: "\(x) has \(placesText(pa)) and \(y) has \(placesText(pb)), so the answer has \(placesText(pa + pb)). Move the decimal point in \(a * b): \(ans).")
+                       why: "\(x) has \(placesText(pa)) and \(y) has \(placesText(pb)), so the answer has \(placesText(pa + pb)). Move the decimal point in \(a * b): \(ans).", whyKo: whyKo)
         default:
             let (name, nk) = d.pick(people)
             switch d.int(0...2) {
             case 0:
                 let k = nz(d, 11...39)
                 let days = d.int(3...9)
+                let whyKo = "\(dec(k, 1)) × \(days) = \(dec(k * days, 1)) km"
                 return num(u, "\(name) walks \(dec(k, 1)) km every day. How many kilometers does \(name) walk in \(days) days?",
                            ko: "\(josa(nk, "은", "는")) 매일 \(dec(k, 1)) km씩 걸어요. \(days)일 동안 걷는 거리는 모두 몇 km인가요?",
                            answer: dec(k * days, 1), unit: "km",
-                           why: "\(dec(k, 1)) × \(days) = \(dec(k * days, 1)) km")
+                           why: "\(dec(k, 1)) × \(days) = \(dec(k * days, 1)) km", whyKo: whyKo)
             case 1:
                 let big = nz(d, 21...89)
                 let times = nz(d, 2...9)
+                let whyKo = productWhyKo(big, times, 2, 1, 1) + " 그래서 멜론의 무게는 \(dec(big * times, 2)) kg이에요."
                 return num(u, "A watermelon weighs \(dec(big, 1)) kg. A melon weighs 0.\(times) times as much as the watermelon. How much does the melon weigh?",
                            ko: "수박의 무게는 \(dec(big, 1)) kg이에요. 멜론의 무게는 수박 무게의 0.\(times)배예요. 멜론의 무게는 몇 kg인가요?",
                            answer: dec(big * times, 2), unit: "kg",
-                           why: productWhy(big, times, 2, 1, 1) + " So the melon weighs \(dec(big * times, 2)) kg.")
+                           why: productWhy(big, times, 2, 1, 1) + " So the melon weighs \(dec(big * times, 2)) kg.", whyKo: whyKo)
             default:
                 let l = nz(d, 11...49), w = nz(d, 2...19)
+                let whyKo = "직사각형의 넓이 = 가로 × 세로 = \(dec(l, 1)) × \(dec(w, 1)). " + productWhyKo(l, w, 2, 1, 1)
                 return num(u, "A rectangle is \(dec(l, 1)) m long and \(dec(w, 1)) m wide. What is its area?",
                            ko: "가로가 \(dec(l, 1)) m, 세로가 \(dec(w, 1)) m인 직사각형이 있어요. 이 직사각형의 넓이는 몇 m²인가요?",
                            answer: dec(l * w, 2), unit: "m²",
-                           why: "Area = length × width = \(dec(l, 1)) × \(dec(w, 1)). " + productWhy(l, w, 2, 1, 1))
+                           why: "Area = length × width = \(dec(l, 1)) × \(dec(w, 1)). " + productWhy(l, w, 2, 1, 1), whyKo: whyKo)
             }
         }
     }
@@ -558,29 +616,33 @@ enum Generator {
         case 0:
             let (shape, shapeKo) = d.pick([("cuboid", "직육면체"), ("cube", "정육면체")])
             let (part, partKo, n) = d.pick([("faces", "면은", 6), ("edges", "모서리는", 12), ("vertices", "꼭짓점은", 8)])
+            let whyKo = "\(shapeKo)는 면 6개, 모서리 12개, 꼭짓점 8개가 있어요."
             return num(u, "How many \(part) does a \(shape) have?", ko: "\(shapeKo)의 \(partKo) 몇 개인가요?",
                        answer: "\(n)", unit: part,
-                       why: "Every \(shape) has 6 faces, 12 edges, and 8 vertices.")
+                       why: "Every \(shape) has 6 faces, 12 edges, and 8 vertices.", whyKo: whyKo)
         case 1:
             var a = 0, b = 0, c = 0
             repeat { a = d.int(2...15); b = d.int(2...15); c = d.int(2...15) } while a == b || b == c || a == c
             let total = 4 * (a + b + c)
+            let whyKo = "직육면체에는 길이가 같은 모서리가 4개씩 있어요. (\(a) + \(b) + \(c)) × 4 = \(a + b + c) × 4 = \(total) cm"
             return num(u, "A cuboid is \(a) cm long, \(b) cm wide, and \(c) cm high. What is the total length of all its edges?",
                        ko: "가로 \(a) cm, 세로 \(b) cm, 높이 \(c) cm인 직육면체가 있어요. 모든 모서리의 길이의 합은 몇 cm인가요?",
                        answer: "\(total)", unit: "cm",
-                       why: "A cuboid has 4 edges of each length. (\(a) + \(b) + \(c)) × 4 = \(a + b + c) × 4 = \(total) cm.")
+                       why: "A cuboid has 4 edges of each length. (\(a) + \(b) + \(c)) × 4 = \(a + b + c) × 4 = \(total) cm.", whyKo: whyKo)
         case 2:
             let e = d.int(2...15)
             if d.bool() {
+                let whyKo = "정육면체는 길이가 같은 모서리가 12개예요: \(e) × 12 = \(12 * e) cm"
                 return num(u, "Each edge of a cube is \(e) cm long. What is the total length of all its edges?",
                            ko: "한 모서리의 길이가 \(e) cm인 정육면체가 있어요. 모든 모서리의 길이의 합은 몇 cm인가요?",
                            answer: "\(12 * e)", unit: "cm",
-                           why: "A cube has 12 edges of the same length: \(e) × 12 = \(12 * e) cm.")
+                           why: "A cube has 12 edges of the same length: \(e) × 12 = \(12 * e) cm.", whyKo: whyKo)
             } else {
+                let whyKo = "정육면체는 길이가 같은 모서리가 12개예요: \(12 * e) ÷ 12 = \(e) cm"
                 return num(u, "The total length of all the edges of a cube is \(12 * e) cm. How long is one edge?",
                            ko: "정육면체의 모든 모서리의 길이의 합은 \(12 * e) cm예요. 한 모서리의 길이는 몇 cm인가요?",
                            answer: "\(e)", unit: "cm",
-                           why: "A cube has 12 equal edges: \(12 * e) ÷ 12 = \(e) cm.")
+                           why: "A cube has 12 equal edges: \(12 * e) ÷ 12 = \(e) cm.", whyKo: whyKo)
             }
         case 3:
             let asks: [(String, String, Int, String)] = [
@@ -591,10 +653,11 @@ enum Generator {
                 ("faces can be seen", "보이는 면은 몇 개인가요?", 3, "faces"),
             ]
             let (q, qKo, n, unit) = d.pick(asks)
+            let whyKo = "직육면체의 겨냥도에는 실선 9개와 점선 3개, 보이는 꼭짓점 7개와 보이지 않는 꼭짓점 1개, 보이는 면 3개와 보이지 않는 면 3개가 있어요."
             return num(u, "In a sketch of a cuboid, the edges we can see are drawn with solid lines and the hidden edges are drawn with dotted lines. How many \(q)?",
                        ko: "직육면체의 겨냥도에서 보이는 모서리는 실선으로, 보이지 않는 모서리는 점선으로 그려요. \(qKo)",
                        answer: "\(n)", unit: unit,
-                       why: "In a sketch of a cuboid: 9 solid edges and 3 dotted edges, 7 visible vertices and 1 hidden vertex, 3 visible faces and 3 hidden faces.")
+                       why: "In a sketch of a cuboid: 9 solid edges and 3 dotted edges, 7 visible vertices and 1 hidden vertex, 3 visible faces and 3 hidden faces.", whyKo: whyKo)
         case 4:
             let asks: [(String, String, Int, String, String)] = [
                 ("How many faces of a cuboid are perpendicular to one face?", "직육면체에서 한 면과 수직인 면은 몇 개인가요?", 4, "faces", "Each face meets 4 neighboring faces at right angles. Only the opposite face is not perpendicular to it."),
@@ -604,29 +667,40 @@ enum Generator {
                 ("How many squares are in the net of a cube?", "정육면체의 전개도는 정사각형 몇 개로 이루어져 있나요?", 6, "squares", "A cube has 6 square faces, so its net has 6 squares."),
             ]
             let (q, qKo, n, unit, why) = d.pick(asks)
-            return num(u, q, ko: qKo, answer: "\(n)", unit: unit, why: why)
+            let askWhyKo: [String: String] = [
+                "직육면체에서 한 면과 수직인 면은 몇 개인가요?": "한 면은 옆에 있는 면 4개와 수직으로 만나요. 마주 보는 면만 수직이 아니에요.",
+                "직육면체에서 한 면과 평행한 면은 몇 개인가요?": "마주 보는 면 1개만 평행해요. 직육면체에는 평행한 면이 3쌍 있어요.",
+                "직육면체에서 서로 평행한 면은 모두 몇 쌍인가요?": "위와 아래, 앞과 뒤, 왼쪽과 오른쪽으로 3쌍이에요.",
+                "직육면체의 한 꼭짓점에서 만나는 모서리는 몇 개인가요?": "한 꼭짓점에서 가로, 세로, 높이 방향의 모서리 3개가 만나요.",
+                "정육면체의 전개도는 정사각형 몇 개로 이루어져 있나요?": "정육면체는 정사각형 면이 6개라서 전개도도 정사각형 6개로 이루어져 있어요.",
+            ]
+            let whyKo = askWhyKo[qKo] ?? ""
+            return num(u, q, ko: qKo, answer: "\(n)", unit: unit, why: why, whyKo: whyKo)
         case 5:
             if d.bool() {
                 let truths = ["All 6 faces are squares.", "All 12 edges have the same length.", "It has 8 vertices."]
                 let lie = d.pick(["It has 10 edges.", "Two faces next to each other are parallel.", "It has 4 faces."])
+                let whyKo = "틀린 설명은 '\(Glossary.choiceKo[lie] ?? lie)'예요. 정육면체는 정사각형 면 6개, 길이가 같은 모서리 12개, 꼭짓점 8개가 있고, 서로 맞닿은 면은 수직이에요."
                 return choice(u, "Which statement about a cube is NOT true?", ko: "정육면체에 대한 설명으로 틀린 것은 어느 것인가요?",
                               answer: lie, wrong: truths, d: d,
-                              why: "\"\(lie)\" is false. A cube has 6 square faces, 12 equal edges, and 8 vertices, and faces next to each other are perpendicular.")
+                              why: "\"\(lie)\" is false. A cube has 6 square faces, 12 equal edges, and 8 vertices, and faces next to each other are perpendicular.", whyKo: whyKo)
             } else {
                 let truths = ["It has 6 faces.", "Opposite faces are parallel.", "Faces next to each other are perpendicular."]
                 let lie = d.pick(["All its faces must be squares.", "It has 6 vertices.", "It has 8 edges."])
+                let whyKo = "틀린 설명은 '\(Glossary.choiceKo[lie] ?? lie)'예요. 직육면체는 직사각형 면 6개(정사각형이 아니어도 돼요), 모서리 12개, 꼭짓점 8개가 있어요."
                 return choice(u, "Which statement about a cuboid is NOT true?", ko: "직육면체에 대한 설명으로 틀린 것은 어느 것인가요?",
                               answer: lie, wrong: truths, d: d,
-                              why: "\"\(lie)\" is false. A cuboid has 6 rectangular faces (they don't have to be squares), 12 edges, and 8 vertices.")
+                              why: "\"\(lie)\" is false. A cuboid has 6 rectangular faces (they don't have to be squares), 12 edges, and 8 vertices.", whyKo: whyKo)
             }
         default:
             var a = 0, b = 0, c = 0
             repeat { a = d.int(2...12); b = d.int(2...12); c = d.int(2...12) } while a == b || b == c || a == c
             let total = 4 * (a + b + c)
+            let whyKo = "가로 + 세로 + 높이 = \(total) ÷ 4 = \(a + b + c) cm. 높이 = \(a + b + c) − \(a) − \(b) = \(c) cm"
             return num(u, "The total length of all the edges of a cuboid is \(total) cm. Its length is \(a) cm and its width is \(b) cm. What is its height?",
                        ko: "직육면체의 모든 모서리의 길이의 합은 \(total) cm예요. 가로는 \(a) cm, 세로는 \(b) cm예요. 높이는 몇 cm인가요?",
                        answer: "\(c)", unit: "cm",
-                       why: "One length + one width + one height = \(total) ÷ 4 = \(a + b + c) cm. Height = \(a + b + c) − \(a) − \(b) = \(c) cm.")
+                       why: "One length + one width + one height = \(total) ÷ 4 = \(a + b + c) cm. Height = \(a + b + c) − \(a) − \(b) = \(c) cm.", whyKo: whyKo)
         }
     }
 
@@ -669,10 +743,11 @@ enum Generator {
             let (tmpl, tmplKo, unit, m, r) = d.pick(contexts)
             let v = values(d, count: n, mean: m, spread: 10, range: r)
             let sum = v.reduce(0, +)
+            let whyKo = "평균 = 자료의 합 ÷ 자료의 수. 합 = \(v.map(String.init).joined(separator: " + ")) = \(sum). \(sum) ÷ \(n) = \(m)"
             return num(u, tmpl.replacingOccurrences(of: "%@", with: list(v)),
                        ko: tmplKo.replacingOccurrences(of: "%@", with: listKo(v)),
                        answer: "\(m)", unit: unit,
-                       why: "Average = total ÷ number of values. Total = \(v.map(String.init).joined(separator: " + ")) = \(sum). \(sum) ÷ \(n) = \(m).")
+                       why: "Average = total ÷ number of values. Total = \(v.map(String.init).joined(separator: " + ")) = \(sum). \(sum) ÷ \(n) = \(m).", whyKo: whyKo)
         case 2:
             let n = d.int(4...5)
             let m = d.int(12...30)
@@ -683,38 +758,59 @@ enum Generator {
                 missing = m * n - known.reduce(0, +)
             } while missing <= 0 || abs(missing - m) > 12
             let word = n == 4 ? "fourth" : "fifth"
+            let whyKo = "합 = 평균 × 개수 = \(m) × \(n) = \(m * n). 알고 있는 수들의 합은 \(known.reduce(0, +)). \(m * n) − \(known.reduce(0, +)) = \(missing)"
             return num(u, "The average of \(n) numbers is \(m). \(n - 1 == 3 ? "Three" : "Four") of the numbers are \(list(known)). What is the \(word) number?",
                        ko: "수 \(n)개의 평균은 \(josa("\(m)", "이에요", "예요")). 그중 \(n - 1)개의 수는 \(josa(listKo(known), "이에요", "예요")). 나머지 한 수는 얼마인가요?",
                        answer: "\(missing)",
-                       why: "Total = average × count = \(m) × \(n) = \(m * n). The known numbers add up to \(known.reduce(0, +)). \(m * n) − \(known.reduce(0, +)) = \(missing).")
+                       why: "Total = average × count = \(m) × \(n) = \(m * n). The known numbers add up to \(known.reduce(0, +)). \(m * n) − \(known.reduce(0, +)) = \(missing).", whyKo: whyKo)
         case 3:
             let pa = d.int(3...6), pb = d.int(3...6)
             let ma = d.int(8...20)
             var mb = d.int(8...20)
             while mb == ma { mb = d.int(8...20) }
             let ans = ma > mb ? "Team A" : "Team B"
+            let whyKo = "A 모둠: \(pa * ma) ÷ \(pa) = \(ma)권. B 모둠: \(pb * mb) ÷ \(pb) = \(mb)권. \(ma > mb ? "A" : "B") 모둠의 평균이 더 커요."
             return choice(u, "Team A has \(pa) members who read \(pa * ma) books in total. Team B has \(pb) members who read \(pb * mb) books in total. Which team read more books per person on average?",
                           ko: "A 모둠은 \(pa)명이 책을 모두 \(pa * ma)권 읽었어요. B 모둠은 \(pb)명이 책을 모두 \(pb * mb)권 읽었어요. 한 사람당 평균적으로 책을 더 많이 읽은 모둠은 어느 모둠인가요?",
                           answer: ans, wrong: [ma > mb ? "Team B" : "Team A", "They are the same"], shuffle: false, d: d,
-                          why: "Team A: \(pa * ma) ÷ \(pa) = \(ma) books. Team B: \(pb * mb) ÷ \(pb) = \(mb) books. \(ans) has the greater average.")
+                          why: "Team A: \(pa * ma) ÷ \(pa) = \(ma) books. Team B: \(pb * mb) ÷ \(pb) = \(mb) books. \(ans) has the greater average.", whyKo: whyKo)
                 .ordered(["Team A", "Team B", "They are the same"])
         case 4:
             let (event, eventKo, level, why) = d.pick(possibilityEvents)
+            let whyKo = possibilityWhyKo[event] ?? ""
             return choice(u, "How likely is this to happen?\n\"\(event)\"",
                           ko: "다음 일이 일어날 가능성은 어느 정도인가요?\n\"\(eventKo)\"", answer: level,
                           wrong: possibilityWords.filter { $0 != level }, shuffle: false, d: d,
-                          why: why)
+                          why: why, whyKo: whyKo)
                 .ordered(possibilityWords)
         default:
             let events = possibilityEvents.filter { [possibilityWords[0], possibilityWords[2], possibilityWords[4]].contains($0.2) }
             let (event, eventKo, level, why) = d.pick(events)
             let value = level == possibilityWords[0] ? "0" : level == possibilityWords[4] ? "1" : "1/2"
+            let whyKo = (possibilityWhyKo[event] ?? "") + " 불가능 = 0, 반반 = 1/2, 확실 = 1이에요. 답: \(value)"
             return num(u, "Write the possibility as a number (0, 1/2, or 1).\n\"\(event)\"",
                        ko: "다음 일이 일어날 가능성을 수(0, 1/2, 1)로 나타내세요.\n\"\(eventKo)\"",
                        answer: value,
-                       why: why + " Impossible = 0, even chance = 1/2, certain = 1. So the answer is \(value).")
+                       why: why + " Impossible = 0, even chance = 1/2, certain = 1. So the answer is \(value).", whyKo: whyKo)
         }
     }
+
+    /// 가능성 문제의 한국어 풀이 (영어 사건 문장 → 풀이)
+    static let possibilityWhyKo: [String: String] = [
+        "You roll a regular die and get a number less than 7.": "주사위의 눈 1~6은 모두 7보다 작으니 반드시 일어나요. → 확실하다",
+        "You pick a marble from a bag of only red marbles, and it is red.": "구슬이 모두 빨간색이니 반드시 빨간 구슬이 나와요. → 확실하다",
+        "Tomorrow will come after today.": "오늘 다음에는 항상 내일이 와요. → 확실하다",
+        "You roll a regular die and get 7.": "주사위에는 1~6만 있어서 7은 절대 나올 수 없어요. → 불가능하다",
+        "You pick a blue marble from a bag of only red marbles.": "주머니에 파란 구슬이 없으니 일어날 수 없어요. → 불가능하다",
+        "A week has 10 days.": "일주일은 항상 7일이에요. → 불가능하다",
+        "You flip a coin and get heads.": "동전은 그림 면과 숫자 면 2가지라서 반반이에요. → 반반이다",
+        "You roll a regular die and get an even number.": "6개 중 2, 4, 6의 3개가 짝수라서 반반이에요. → 반반이다",
+        "You pick a marble from a bag with 3 red and 3 blue marbles, and it is red.": "구슬의 절반이 빨간색이라 반반이에요. → 반반이다",
+        "You roll a regular die and get a number greater than 1.": "6개 중 2~6의 5개가 1보다 커서 일어날 것 같아요. → ~일 것 같다",
+        "You pick a marble from a bag with 9 red and 1 blue marble, and it is red.": "구슬 대부분이 빨간색이라 일어날 것 같아요. → ~일 것 같다",
+        "You roll a regular die and get a 6.": "6개 중 6은 1개뿐이라 일어나지 않을 것 같아요. → ~아닐 것 같다",
+        "You pick a marble from a bag with 9 red and 1 blue marble, and it is blue.": "10개 중 파란 구슬은 1개뿐이라 일어나지 않을 것 같아요. → ~아닐 것 같다",
+    ]
 
     static let possibilityWords = ["impossible", "unlikely", "even chance (half and half)", "likely", "certain"]
 

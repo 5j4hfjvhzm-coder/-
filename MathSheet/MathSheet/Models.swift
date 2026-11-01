@@ -175,13 +175,18 @@ struct Worksheet: Codable, Identifiable {
     var submittedAt: Date?
     /// 학습지 날짜 "2026-10-28"
     var day: String?
-    /// 그날의 몇 번째 장인지 (1부터)
+    /// 그날의 몇 번째 장인지 (1부터). 단원별 연습은 그 단원의 몇 회째인지
     var number: Int?
+    /// 단원별 연습 학습지면 그 단원 (매일 학습지가 아니라서 밀린 학습지에 쌓이지 않아요)
+    var practiceUnit: MathUnit?
 
     var dayKey: String { day ?? id }
     var seq: Int { number ?? 1 }
     /// "11월 1일 (토) · 3장"
-    var title: String { "\(Day.label(dayKey)) · \(seq)장" }
+    var title: String {
+        if let u = practiceUnit { return "\(u.korean) 연습 \(seq)회" }
+        return "\(Day.label(dayKey)) · \(seq)장"
+    }
 
     var isDone: Bool { submittedAt != nil }
     var score: Int { problems.filter { $0.correct == true }.count }
@@ -210,7 +215,8 @@ struct Settings: Codable, Equatable {
     var chapterStart: String?
     var units: [MathUnit] = MathUnit.allCases
     var skipWeekends = false
-    var reminderOn = false
+    /// 매일 알림 (기본으로 켜요: 학습지가 매일 온다는 걸 알려줘요)
+    var reminderOn = true
     /// 알림 시각 (자정부터 분)
     var reminderMinutes = 17 * 60
     /// 문제의 한국어 뜻을 처음부터 펼쳐 둘지

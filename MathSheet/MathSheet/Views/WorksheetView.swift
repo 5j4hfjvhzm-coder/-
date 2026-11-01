@@ -109,6 +109,17 @@ struct WorksheetView: View {
             .buttonStyle(.borderedProminent)
             .tint(.orange)
             .padding(.top, 6)
+        } else if let unit = sheet.practiceUnit {
+            Button {
+                selection = .sheet(store.newPractice(unit))
+            } label: {
+                Label("\(unit.korean) 한 장 더 풀기", systemImage: "plus.circle.fill")
+                    .font(.headline)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 6)
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(unit.color)
         } else if let next = store.pending.first {
             Button {
                 selection = .sheet(next.id)

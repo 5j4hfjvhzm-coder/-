@@ -4,6 +4,7 @@ enum Route: Hashable {
     case sheet(String)
     case history
     case wrongNotes
+    case practice
 }
 
 extension MathUnit {
@@ -62,6 +63,9 @@ struct ContentView: View {
                 }
 
                 Section {
+                    NavigationLink(value: Route.practice) {
+                        Label("단원별 연습 · 원하는 단원 풀기", systemImage: "square.grid.2x2")
+                    }
                     NavigationLink(value: Route.wrongNotes) {
                         Label("오답노트 · 틀린 문제 \(store.wrongProblems.count)개", systemImage: "exclamationmark.bubble")
                     }
@@ -85,6 +89,8 @@ struct ContentView: View {
                         .id(id)
                 case .history:
                     HistoryView(selection: $selection)
+                case .practice:
+                    PracticeView(selection: $selection)
                 case .wrongNotes:
                     WrongNotesView()
                 case nil:

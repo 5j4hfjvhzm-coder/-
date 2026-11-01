@@ -51,12 +51,14 @@ final class Store: ObservableObject {
             settings = saved.settings
             lastDay = saved.lastDay
             // 한국어 뜻이 없는 예전 학습지 중 아직 안 건드린 것은 새로 만들어요.
-            for i in sheets.indices where !sheets[i].isDone && sheets[i].answeredCount == 0
-                && sheets[i].problems.contains(where: { $0.ko == nil }) {
+            for i in sheets.indices where !sheets[i].isDone && sheets[i].answeredCount == 0 && sheets[i].practiceUnit == nil
+                && sheets[i].problems.contains(where: { $0.ko == nil || $0.whyKo == nil }) {
                 sheets[i].problems = Generator.worksheet(day: sheets[i].dayKey, number: sheets[i].seq, settings: settings)
             }
         }
         refresh()
+        // 매일 학습지 알림을 예약해요. (처음 한 번은 알림 허락을 물어봐요)
+        if settings.reminderOn { updateReminder() }
     }
 
     private func save() {
@@ -80,7 +82,7 @@ final class Store: ObservableObject {
         let perDay = max(settings.sheetsPerDay, 1)
         while day <= today {
             if !(settings.skipWeekends && Day.isWeekend(day)) {
-                for n in 1...perDay where !sheets.contains(where: { $0.dayKey == day && $0.seq == n }) {
+                for n in 1...perDay where !sheets.contains(where: { $0.dayKey == day && $0.seq == n && $0.practiceUnit == nil }) {
                     sheets.append(Worksheet(id: "\(day)#\(n)",
                                             problems: Generator.worksheet(day: day, number: n, settings: settings),
                                             day: day, number: n))
@@ -91,7 +93,7 @@ final class Store: ObservableObject {
         }
         // 오늘 장수를 줄였으면, 안 건드린 남는 학습지는 빼요.
         let before = sheets.count
-        sheets.removeAll { $0.dayKey == today && $0.seq > perDay && !$0.isDone && $0.answeredCount == 0 }
+        sheets.removeAll { $0.practiceUnit == nil && $0.dayKey == today && $0.seq > perDay && !$0.isDone && $0.answeredCount == 0 }
         if sheets.count != before { changed = true }
         if lastDay != today {
             lastDay = today
@@ -104,10 +106,28 @@ final class Store: ObservableObject {
     // MARK: - 목록
 
     /// 아직 안 푼 학습지 (오래된 것부터)
-    var pending: [Worksheet] { sheets.filter { !$0.isDone } }
+    var pending: [Worksheet] { sheets.filter { !$0.isDone && $0.practiceUnit == nil } }
 
     /// 오늘의 학습지들 (1장부터)
-    var todaySheets: [Worksheet] { sheets.filter { $0.dayKey == Day.today } }
+    var todaySheets: [Worksheet] { sheets.filter { $0.dayKey == Day.today && $0.practiceUnit == nil } }
+
+    // MARK: - 단원별 연습
+
+    /// 그 단원의 연습 학습지 (최근 것부터)
+    func practiceSheets(_ unit: MathUnit) -> [Worksheet] {
+        sheets.filter { $0.practiceUnit == unit }.sorted { $0.seq > $1.seq }
+    }
+
+    /// 단원 연습 학습지를 새로 만들고 id를 돌려줘요. (언제든 원하는 만큼)
+    @discardableResult
+    func newPractice(_ unit: MathUnit) -> String {
+        let n = (sheets.filter { $0.practiceUnit == unit }.map(\.seq).max() ?? 0) + 1
+        let id = "practice-\(unit.rawValue)-\(n)"
+        let problems = Generator.worksheet(day: "practice-\(unit.rawValue)", number: n, settings: settings, only: [unit])
+        sheets.append(Worksheet(id: id, problems: problems, day: Day.today, number: n, practiceUnit: unit))
+        save()
+        return id
+    }
 
     /// 밀린 학습지 (오늘 것 빼고)
     var overdue: [Worksheet] { pending.filter { $0.dayKey != Day.today } }
@@ -118,7 +138,7 @@ final class Store: ObservableObject {
     }
 
     private func regenerateUntouched() {
-        for i in sheets.indices where !sheets[i].isDone && sheets[i].answeredCount == 0 {
+        for i in sheets.indices where !sheets[i].isDone && sheets[i].answeredCount == 0 && sheets[i].practiceUnit == nil {
             sheets[i].problems = Generator.worksheet(day: sheets[i].dayKey, number: sheets[i].seq, settings: settings)
         }
     }
