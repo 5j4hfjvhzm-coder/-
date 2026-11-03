@@ -144,3 +144,28 @@ BlankVocab/
 - 설정: 하루 문제 수(5~20), 주말 쉬기, 매일 알림(앱 아이콘에 남은 학습지 수 표시), 기록 지우기
 
 실행: Xcode에서 `MathSheet/MathSheet.xcodeproj` 를 열고 Team을 고른 뒤 ▶︎. Bundle ID `com.siwoolee.mathsheet1028`, iPadOS 17 이상.
+
+---
+
+# 영어사전 (애플워치 전용)
+
+`WatchDict/WatchDict.xcodeproj` — 애플워치에서 바로 영어 단어 뜻을 찾는 앱이에요. 사전 데이터는 키보드와 같은 **네이버 영한사전** (비공식 API, [seia-soto/naverDict](https://github.com/seia-soto/naverDict) 방식)을 써요.
+
+- **검색**: 첫 화면 검색창을 누르고 받아쓰기(말하기)·손글씨·키보드로 입력. 영어로 찾으면 영한, 한글로 찾으면 한영 결과가 나와요
+- **결과 목록**: 단어마다 품사와 첫 뜻을 미리 보여줘요. 탭하면 전체 뜻(품사별 번호), 발음기호, 출처
+- **🔊 발음 듣기**: 워치 스피커로 단어를 읽어줘요
+- **★ 단어장**: 별을 누르면 저장, 첫 화면 "단어장"에서 다시 보기 (밀어서 삭제). 저장한 단어는 인터넷 없이도 볼 수 있어요
+- **최근 검색**: 최근 30개, 탭하면 다시 검색, 밀어서 삭제 / 모두 지우기
+
+인터넷이 필요해요 (아이폰과 연결되어 있거나 워치가 Wi-Fi·셀룰러에 연결된 상태).
+
+실행: Xcode에서 `WatchDict/WatchDict.xcodeproj` 를 열고 Team을 고른 뒤, 실행 대상에서 페어링된 Apple Watch(또는 워치 시뮬레이터)를 골라 ▶︎. Bundle ID `com.siwoolee.watchdict1103`, watchOS 10 이상. 워치 전용 앱이라 아이폰 쪽 앱은 없어요.
+
+```
+WatchDict/WatchDict/
+├── WatchDictApp.swift      앱 진입점
+├── NaverDict.swift         네이버 사전 검색 (키보드와 같은 코드)
+├── Store.swift             최근 검색, ★ 단어장 저장
+├── Speech.swift            발음 듣기 (TTS)
+└── Views/                  첫 화면, 검색 결과, 단어 상세, 단어장
+```
