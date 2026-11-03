@@ -5,12 +5,18 @@ struct EntryDetailView: View {
     @Environment(Store.self) private var store
     let entry: NaverDict.Entry
 
+    #if os(iOS)
+    private static let titleFont = Font.largeTitle.bold()
+    #else
+    private static let titleFont = Font.title3.bold()
+    #endif
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 8) {
                 HStack(alignment: .firstTextBaseline, spacing: 2) {
                     Text(entry.word)
-                        .font(.title3.bold())
+                        .font(Self.titleFont)
                         .minimumScaleFactor(0.6)
                     if let sup = entry.superscript {
                         Text(sup)
@@ -70,6 +76,9 @@ struct EntryDetailView: View {
                     .padding(.top, 4)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
+            #if os(iOS)
+            .padding()
+            #endif
         }
         .navigationTitle(entry.word)
     }

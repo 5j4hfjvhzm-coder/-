@@ -14,7 +14,7 @@
             buildForAnalyzing = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "B30000000000000000000006"
+               BlueprintIdentifier = "B40000000000000000000010"
                BuildableName = "WatchDict.app"
                BlueprintName = "WatchDict"
                ReferencedContainer = "container:WatchDict.xcodeproj">
@@ -42,7 +42,7 @@
          runnableDebuggingMode = "0">
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "B30000000000000000000006"
+            BlueprintIdentifier = "B40000000000000000000010"
             BuildableName = "WatchDict.app"
             BlueprintName = "WatchDict"
             ReferencedContainer = "container:WatchDict.xcodeproj">
@@ -59,7 +59,7 @@
          runnableDebuggingMode = "0">
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "B30000000000000000000006"
+            BlueprintIdentifier = "B40000000000000000000010"
             BuildableName = "WatchDict.app"
             BlueprintName = "WatchDict"
             ReferencedContainer = "container:WatchDict.xcodeproj">

@@ -147,25 +147,33 @@ BlankVocab/
 
 ---
 
-# 영어사전 (애플워치 전용)
+# 영어사전 (아이폰 + 애플워치)
 
-`WatchDict/WatchDict.xcodeproj` — 애플워치에서 바로 영어 단어 뜻을 찾는 앱이에요. 사전 데이터는 키보드와 같은 **네이버 영한사전** (비공식 API, [seia-soto/naverDict](https://github.com/seia-soto/naverDict) 방식)을 써요.
+`WatchDict/WatchDict.xcodeproj` — 아이폰과 애플워치에서 영어 단어 뜻을 찾는 앱이에요. **아이폰에 설치하면 워치 앱도 같이 들어 있어서**, 아이폰 Watch 앱을 통해 워치에 설치돼요. 사전 데이터는 키보드와 같은 **네이버 영한사전** (비공식 API, [seia-soto/naverDict](https://github.com/seia-soto/naverDict) 방식)을 써요.
 
-- **검색**: 첫 화면 검색창을 누르고 받아쓰기(말하기)·손글씨·키보드로 입력. 영어로 찾으면 영한, 한글로 찾으면 한영 결과가 나와요
-- **결과 목록**: 단어마다 품사와 첫 뜻을 미리 보여줘요. 탭하면 전체 뜻(품사별 번호), 발음기호, 출처
-- **🔊 발음 듣기**: 워치 스피커로 단어를 읽어줘요
-- **★ 단어장**: 별을 누르면 저장, 첫 화면 "단어장"에서 다시 보기 (밀어서 삭제). 저장한 단어는 인터넷 없이도 볼 수 있어요
-- **최근 검색**: 최근 30개, 탭하면 다시 검색, 밀어서 삭제 / 모두 지우기
+- **검색**: 영어로 찾으면 영한, 한글로 찾으면 한영. 워치에서는 받아쓰기·손글씨·키보드로 입력
+- **결과 목록**: 단어마다 품사와 첫 뜻 미리 보기. 탭하면 전체 뜻(품사별 번호), 발음기호, 출처
+- **🔊 발음 듣기**, **★ 단어장**(인터넷 없이도 보기, 밀어서 삭제), **최근 검색** 30개
 
-인터넷이 필요해요 (아이폰과 연결되어 있거나 워치가 Wi-Fi·셀룰러에 연결된 상태).
+아이폰과 워치는 단어장을 따로 저장해요. 인터넷이 필요해요 (워치는 아이폰 연결 또는 Wi-Fi·셀룰러).
 
-실행: Xcode에서 `WatchDict/WatchDict.xcodeproj` 를 열고 Team을 고른 뒤, 실행 대상에서 페어링된 Apple Watch(또는 워치 시뮬레이터)를 골라 ▶︎. Bundle ID `com.siwoolee.watchdict1103`, watchOS 10 이상. 워치 전용 앱이라 아이폰 쪽 앱은 없어요.
+## 설치
+
+1. Xcode에서 `WatchDict/WatchDict.xcodeproj` 를 열고, `WatchDict` 와 `WatchDict Watch App` 두 타깃 모두 **Signing & Capabilities → Team** 을 고릅니다.
+2. Xcode가 **watchOS … Not Installed → Get** 을 띄우면 받아 주세요. 워치 부분을 맥에서 만들 때 필요해서 한 번은 꼭 받아야 해요.
+3. 위쪽 스킴은 **WatchDict**, 실행 대상은 **내 iPhone** 을 골라 ▶︎ → 아이폰에 "영어사전"이 설치돼요.
+4. 아이폰 **Watch 앱 → 하단 '나의 시계' → 아래로 내려 '사용 가능한 앱'** 에서 영어사전 **설치**. (Watch 앱 › 일반 › '자동 앱 설치'가 켜져 있으면 저절로 들어가요.)
+
+Bundle ID: 아이폰 `com.siwoolee.watchdict1103`, 워치 `com.siwoolee.watchdict1103.watchkitapp` (아이폰 ID를 바꾸면 워치 ID와 워치 타깃의 `WKCompanionAppBundleIdentifier` 도 같이 바꿔야 해요). iOS 17 / watchOS 10 이상.
 
 ```
-WatchDict/WatchDict/
-├── WatchDictApp.swift      앱 진입점
-├── NaverDict.swift         네이버 사전 검색 (키보드와 같은 코드)
-├── Store.swift             최근 검색, ★ 단어장 저장
-├── Speech.swift            발음 듣기 (TTS)
-└── Views/                  첫 화면, 검색 결과, 단어 상세, 단어장
+WatchDict/
+├── Shared/                 아이폰·워치 공통 코드
+│   ├── WatchDictApp.swift  앱 진입점
+│   ├── NaverDict.swift     네이버 사전 검색 (키보드와 같은 코드)
+│   ├── Store.swift         최근 검색, ★ 단어장 저장
+│   ├── Speech.swift        발음 듣기 (TTS)
+│   └── Views/              첫 화면, 검색 결과, 단어 상세, 단어장
+├── iOS/                    아이폰 앱 아이콘
+└── Watch/                  워치 앱 아이콘
 ```

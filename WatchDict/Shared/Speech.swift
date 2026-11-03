@@ -7,6 +7,11 @@ final class Speech {
     private let synth = AVSpeechSynthesizer()
 
     func say(_ text: String) {
+        #if os(iOS)
+        // 무음 모드에서도 들리게
+        try? AVAudioSession.sharedInstance().setCategory(.playback, mode: .spokenAudio, options: [.duckOthers])
+        try? AVAudioSession.sharedInstance().setActive(true)
+        #endif
         synth.stopSpeaking(at: .immediate)
         let u = AVSpeechUtterance(string: text)
         u.voice = AVSpeechSynthesisVoice(language: Self.hasHangul(text) ? "ko-KR" : "en-US")
