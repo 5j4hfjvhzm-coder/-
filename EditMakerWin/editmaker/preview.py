@@ -141,8 +141,14 @@ def render(plan, clips, out_path, width=540, progress=lambda m: None):
     with open(script, "w", encoding="utf-8") as f:
         f.write(";\n".join(filters))
     progress("미리보기 영상 만드는 중…")
-    args += ["-filter_complex_script", script, "-map", f"[{last}]"] + audio_map + [
+    tail = ["-map", f"[{last}]"] + audio_map + [
         "-t", f"{plan['duration']:.3f}", "-c:v", "libx264", "-preset", "veryfast", "-crf", "24", "-pix_fmt", "yuv420p",
         "-c:a", "aac", "-b:a", "160k", "-movflags", "+faststart", out_path]
-    media.run(args)
+    # ffmpeg 7+ 은 "-/filter_complex 파일", 예전 버전은 "-filter_complex_script 파일"
+    try:
+        media.run(args + ["-/filter_complex", script] + tail)
+    except RuntimeError as e:
+        if "filter_complex" not in str(e) and "Unrecognized option" not in str(e):
+            raise
+        media.run(args + ["-filter_complex_script", script] + tail)
     return out_path
