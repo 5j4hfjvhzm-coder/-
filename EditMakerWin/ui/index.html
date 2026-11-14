@@ -1,0 +1,551 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>에딧 메이커</title>
+<style>
+:root{
+  --bg:#09060F; --pink:#FF3DAE; --purple:#8C54FF; --blue:#3399FF; --cyan:#59F2FF;
+  --card:rgba(255,255,255,.05); --stroke:rgba(255,255,255,.1); --dim:rgba(255,255,255,.55);
+  --neon:linear-gradient(90deg,var(--pink),var(--purple),var(--blue));
+  --neon-d:linear-gradient(135deg,var(--pink),var(--purple),var(--blue));
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);color:#fff;overflow:hidden;
+  font-family:"Segoe UI Variable Text","Segoe UI","Malgun Gothic","Apple SD Gothic Neo",sans-serif;font-size:13px}
+button{font:inherit;color:inherit;cursor:pointer}
+button:disabled{cursor:not-allowed;opacity:.4}
+input,textarea,select{font:inherit;color:#fff}
+::-webkit-scrollbar{width:9px;height:9px}::-webkit-scrollbar-thumb{background:rgba(255,255,255,.15);border-radius:9px}
+
+/* 오로라 배경 */
+.aurora{position:fixed;inset:0;z-index:0;overflow:hidden;pointer-events:none}
+.blob{position:absolute;border-radius:50%;filter:blur(70px);opacity:.5}
+.b1{width:55vw;height:55vw;background:radial-gradient(circle,var(--pink),transparent 65%);left:-15vw;top:-20vw;animation:f1 26s ease-in-out infinite alternate}
+.b2{width:60vw;height:60vw;background:radial-gradient(circle,var(--purple),transparent 65%);right:-20vw;top:5vw;animation:f2 32s ease-in-out infinite alternate}
+.b3{width:45vw;height:45vw;background:radial-gradient(circle,var(--blue),transparent 65%);left:25vw;bottom:-25vw;animation:f3 29s ease-in-out infinite alternate}
+@keyframes f1{to{transform:translate(18vw,14vw)}}@keyframes f2{to{transform:translate(-16vw,12vw)}}@keyframes f3{to{transform:translate(-12vw,-14vw)}}
+.grain{position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.06;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence baseFrequency='.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E")}
+
+.app{position:relative;z-index:1;display:flex;height:100vh}
+/* 사이드바 */
+.side{width:250px;flex:none;background:rgba(0,0,0,.28);border-right:1px solid var(--stroke);display:flex;flex-direction:column;padding:26px 14px 18px}
+.logo{display:flex;gap:10px;align-items:center;padding:0 8px 28px}
+.logo .mark{width:36px;height:36px;border-radius:11px;background:var(--neon-d);display:grid;place-items:center;box-shadow:0 0 18px rgba(255,61,174,.6);font-size:15px}
+.logo b{display:block;font-size:17px;font-weight:900;letter-spacing:1.5px;background:var(--neon);-webkit-background-clip:text;color:transparent}
+.logo small{color:var(--dim);font-size:10px}
+.step{display:flex;gap:12px;align-items:center;width:100%;text-align:left;background:none;border:0;padding:9px 10px;border-radius:14px;margin-bottom:5px;transition:.15s}
+.step:hover:not(:disabled){background:rgba(255,255,255,.04)}
+.step.on{background:rgba(255,255,255,.08)}
+.step .dot{width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,.07);display:grid;place-items:center;font-size:14px;flex:none}
+.step.on .dot{background:var(--neon-d);box-shadow:0 0 12px rgba(255,61,174,.6)}
+.step b{display:block;font-size:13px}.step small{color:var(--dim);font-size:10.5px}
+.side .spacer{flex:1}
+.chips{display:flex;flex-direction:column;gap:7px;align-items:flex-start;padding:0 6px}
+.chip{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;padding:4px 10px;border-radius:99px;
+  background:color-mix(in srgb,var(--c,#fff) 12%,transparent);border:1px solid color-mix(in srgb,var(--c,#fff) 25%,transparent);color:var(--c,#fff)}
+
+.main{flex:1;display:flex;flex-direction:column;min-width:0}
+.page{flex:1;overflow:auto;padding:30px 34px;display:none;animation:in .35s ease}
+.page.on{display:block}
+@keyframes in{from{opacity:0;transform:translateX(14px)}}
+h1{font-size:30px;font-weight:900;margin:8px 0 4px;letter-spacing:-.5px}
+.sub{color:var(--dim);margin:0 0 22px}
+.row{display:flex;gap:18px;align-items:flex-start}
+.card{background:var(--card);backdrop-filter:blur(20px);border:1px solid var(--stroke);border-radius:22px;padding:18px;margin-bottom:18px}
+.card.glow{border:1.5px solid transparent;background:linear-gradient(#150f22,#150f22) padding-box,var(--neon-d) border-box;box-shadow:0 0 28px rgba(255,61,174,.22)}
+.hd{display:flex;align-items:baseline;gap:8px;margin-bottom:12px}
+.hd b{font-size:15px}.hd span{color:var(--dim);font-size:12px}.hd .grow{flex:1}
+.drop{border:1.2px dashed rgba(255,255,255,.2);border-radius:18px;background:rgba(255,255,255,.03);text-align:center;padding:40px 16px;transition:.15s}
+.drop.over{border:2px solid var(--pink);background:rgba(255,61,174,.12);transform:scale(1.01)}
+.drop .big{font-size:42px;filter:drop-shadow(0 0 14px rgba(255,61,174,.6))}
+.drop b{display:block;font-size:14px;margin:10px 0 4px}.drop small{color:var(--dim)}
+.btn{border:1px solid rgba(255,255,255,.25);border-radius:99px;padding:9px 18px;font-weight:700;background:var(--neon);box-shadow:0 0 14px rgba(255,61,174,.5);transition:.15s}
+.btn:hover:not(:disabled){box-shadow:0 0 22px rgba(255,61,174,.8)}
+.btn:active{transform:scale(.97)}
+.btn.big{font-size:16px;padding:14px 30px;box-shadow:0 0 24px rgba(255,61,174,.55)}
+.ghost{border:1px solid var(--stroke);background:rgba(255,255,255,.08);border-radius:99px;padding:7px 13px;font-weight:600;font-size:12px}
+.ghost:hover:not(:disabled){background:rgba(255,255,255,.15)}
+.frames{display:flex;gap:8px;height:270px}.frames img{flex:1;min-width:0;height:100%;object-fit:cover;border-radius:12px;border:1px solid var(--stroke)}
+.chiprow{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:12px}
+.tile{position:relative;aspect-ratio:9/16;border-radius:12px;overflow:hidden;border:1px solid var(--stroke);background:rgba(255,255,255,.05)}
+.tile img{width:100%;height:100%;object-fit:cover}
+.tile .len{position:absolute;left:6px;bottom:6px;font-size:10px;font-weight:700;background:rgba(0,0,0,.6);padding:3px 7px;border-radius:99px}
+.tile .x{position:absolute;right:5px;top:5px;border:0;width:22px;height:22px;border-radius:50%;background:var(--pink);display:none}
+.tile:hover{border:2px solid var(--pink)}.tile:hover .x{display:block}
+.footer{display:flex;justify-content:flex-end;gap:12px;align-items:center}
+
+textarea{width:100%;height:150px;resize:vertical;background:rgba(0,0,0,.25);border:1px solid var(--stroke);border-radius:14px;padding:12px;font-size:14px;outline:none}
+textarea:focus{border-color:var(--pink)}
+label.f{display:block;margin:10px 0 4px;font-weight:600;font-size:12.5px}
+select,input[type=text],input[type=password]{width:100%;background:rgba(0,0,0,.3);border:1px solid var(--stroke);border-radius:10px;padding:8px 10px;outline:none}
+select option{background:#1a1226}
+input[type=range]{width:100%;accent-color:var(--pink)}
+.seg{display:flex;background:rgba(0,0,0,.3);border:1px solid var(--stroke);border-radius:12px;padding:3px}
+.seg button{flex:1;border:0;background:none;padding:7px;border-radius:9px;font-weight:600}
+.seg button.on{background:var(--neon);box-shadow:0 0 10px rgba(255,61,174,.5)}
+.hint{color:var(--dim);font-size:11px;margin-top:5px}
+.switch{display:flex;align-items:center;gap:10px;margin:12px 0}
+.switch input{appearance:none;width:38px;height:22px;border-radius:99px;background:rgba(255,255,255,.15);position:relative;flex:none;cursor:pointer;transition:.2s}
+.switch input::after{content:"";position:absolute;width:18px;height:18px;border-radius:50%;background:#fff;top:2px;left:2px;transition:.2s}
+.switch input:checked{background:var(--pink)}.switch input:checked::after{left:18px}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(172px,1fr));gap:12px}
+.sel{border:1px solid var(--stroke);background:rgba(255,255,255,.03);border-radius:16px;padding:12px;text-align:left;transition:.15s}
+.sel:hover{background:rgba(255,255,255,.06)}
+.sel.on{border:2px solid transparent;background:linear-gradient(#1b1229,#1b1229) padding-box,var(--neon-d) border-box;box-shadow:0 0 16px rgba(255,61,174,.35)}
+.sel b{display:block;font-size:12.5px;margin-top:8px}.sel small{color:var(--dim);font-size:10.5px}
+.pv{height:58px;border-radius:10px;background:rgba(0,0,0,.4);display:grid;place-items:center;font-size:22px;overflow:hidden;font-weight:900}
+.pv.auto{background:var(--neon-d);letter-spacing:2px;font-size:16px}
+/* 자막 스타일 미리보기 */
+.st-neon_glow{font-family:"Black Han Sans","BlackHanSans-Regular";color:#ffe9f6;text-shadow:-2px 0 rgba(255,0,80,.7),2px 0 rgba(0,240,255,.7),0 0 8px var(--pink),0 0 18px var(--pink);animation:flick 2.4s infinite}
+.st-soft_blur{font-family:"Gowun Dodum";animation:blurin 2.2s infinite alternate;text-shadow:0 0 12px var(--pink)}
+.st-impact_pop{font-family:"Gasoek One";font-size:26px;text-shadow:2px 2px 0 var(--pink),0 3px 6px #000;animation:pop 1.6s infinite}
+.st-typewriter{font-family:"Do Hyeon";overflow:hidden;white-space:nowrap;border-right:2px solid var(--pink);animation:type 2s steps(3) infinite alternate}
+.st-cute_bounce{font-family:"Jua";text-shadow:0 2px 0 var(--pink);animation:bounce 1.2s infinite}
+.st-light_sweep{font-family:"Orbit";background:linear-gradient(100deg,#bbb 35%,#fff 50%,#bbb 65%);background-size:250%;-webkit-background-clip:text;color:transparent;animation:sweep 1.8s infinite}
+.st-glitch{font-family:"Do Hyeon";text-shadow:-3px 0 red,3px 0 cyan;animation:glitch .4s steps(2) infinite}
+.st-minimal{font-family:"Gowun Dodum";letter-spacing:5px;font-weight:400;font-size:17px}
+@keyframes flick{0%,8%,12%,100%{opacity:1}10%{opacity:.3}}
+@keyframes blurin{from{filter:blur(4px)}to{filter:blur(0)}}
+@keyframes pop{0%{transform:scale(1.15)}30%,100%{transform:scale(1)}}
+@keyframes type{from{width:0}to{width:3.2em}}
+@keyframes bounce{0%,100%{transform:translateY(0) rotate(0)}40%{transform:translateY(-6px) rotate(-4deg)}}
+@keyframes sweep{from{background-position:120%}to{background-position:-120%}}
+@keyframes glitch{50%{text-shadow:3px 0 red,-3px 0 cyan;transform:translateX(1px)}}
+
+/* 만들기 */
+.center{display:flex;flex-direction:column;align-items:center;gap:22px;padding-top:30px}
+.orb{width:210px;height:210px;position:relative;display:grid;place-items:center}
+.orb::before{content:"";position:absolute;inset:0;border-radius:50%;background:radial-gradient(circle,rgba(255,61,174,.35),transparent 65%);animation:pulse 2.4s ease-in-out infinite}
+.ring{position:absolute;inset:14px;border-radius:50%;background:conic-gradient(var(--pink),var(--purple),var(--blue),transparent 30%);
+  -webkit-mask:radial-gradient(circle,transparent 62%,#000 63%);mask:radial-gradient(circle,transparent 62%,#000 63%);animation:spin 1.3s linear infinite;filter:drop-shadow(0 0 10px var(--pink))}
+.ring.idle{animation:none;opacity:.25}
+.orb .pct{font-size:34px;font-weight:900;position:relative}
+@keyframes spin{to{transform:rotate(360deg)}}@keyframes pulse{50%{transform:scale(1.07)}}
+.title-neon{font-size:28px;font-weight:900;background:var(--neon);-webkit-background-clip:text;color:transparent}
+.log{width:min(720px,100%);height:220px;overflow:auto;font-family:Consolas,monospace;font-size:11px;color:rgba(255,255,255,.75);padding:14px;white-space:pre-wrap}
+
+/* 검토 */
+#p-review{padding:0;display:none}
+#p-review.on{display:flex}
+.rv{flex:1;display:flex;flex-direction:column;gap:14px;padding:22px;min-width:0}
+.vbar{display:flex;gap:8px;align-items:center}
+.vtabs{display:flex;gap:8px;overflow-x:auto;flex:1}
+.vtab{border:0;border-radius:99px;padding:7px 12px;background:rgba(255,255,255,.07);white-space:nowrap;max-width:230px;overflow:hidden;text-overflow:ellipsis}
+.vtab b{margin-right:6px;font-weight:900}.vtab span{color:var(--dim);font-size:11px}
+.vtab.on{background:var(--neon);box-shadow:0 0 10px rgba(255,61,174,.5)}.vtab.on span{color:#fff}
+.stage{flex:1;display:flex;gap:16px;min-height:0}
+.player{flex:1;min-width:0;display:grid;place-items:center;position:relative}
+.player video{max-width:100%;max-height:100%;border-radius:18px;background:#000;border:1.2px solid rgba(255,61,174,.5);box-shadow:0 0 34px rgba(140,84,255,.35)}
+.player .busy{position:absolute;inset:0;display:none;place-items:center;background:rgba(0,0,0,.55);border-radius:18px;text-align:center}
+.player .busy.on{display:grid}
+.insp{width:290px;flex:none;overflow:auto}
+.insp .card{margin:0}
+.tl{position:relative;height:104px;padding:10px 12px}
+.tl .lane{position:relative;height:42px}
+.tl .seg,.tl .subb{position:absolute;top:0;height:100%;border-radius:6px;overflow:hidden;cursor:pointer;border:2px solid transparent;background:#222 center/cover}
+.tl .seg::after{content:"";position:absolute;left:0;right:0;bottom:0;height:3px;background:var(--tc,rgba(255,255,255,.35))}
+.tl .subb{top:48px;height:26px;font-size:10px;font-weight:700;padding:4px 6px;white-space:nowrap;text-overflow:ellipsis}
+.tl .sel-on{border-color:#fff;box-shadow:0 0 8px var(--pink)}
+.tl .beat{position:absolute;top:8px;width:1px;height:78px;background:rgba(255,255,255,.1)}
+.tl .head{position:absolute;top:4px;width:2px;height:86px;background:var(--pink);box-shadow:0 0 6px var(--pink);pointer-events:none}
+.chat{width:340px;flex:none;background:rgba(0,0,0,.28);border-left:1px solid var(--stroke);display:flex;flex-direction:column}
+.chat .top{display:flex;align-items:center;gap:8px;padding:22px 16px 12px}
+.chat .top b{font-size:15px;flex:1}
+.msgs{flex:1;overflow:auto;padding:0 14px 10px;display:flex;flex-direction:column;gap:9px}
+.bub{max-width:85%;padding:9px 12px;border-radius:14px;font-size:12.5px;line-height:1.45;white-space:pre-wrap}
+.bub.user{align-self:flex-end;background:var(--neon)}
+.bub.assistant{align-self:flex-start;background:rgba(255,255,255,.09)}
+.bub.system{align-self:flex-start;background:rgba(255,160,0,.12);color:#ffb347}
+.quick{display:flex;gap:6px;overflow-x:auto;padding:0 14px 8px}
+.quick .ghost{white-space:nowrap}
+.ask{display:flex;gap:8px;padding:14px;align-items:flex-end}
+.ask textarea{height:42px;min-height:42px;max-height:110px;font-size:13px}
+.send{width:36px;height:36px;border-radius:50%;border:0;background:var(--neon-d);box-shadow:0 0 10px rgba(255,61,174,.6);font-weight:900;flex:none}
+
+/* 상태바 */
+.status{height:34px;flex:none;display:flex;align-items:center;gap:10px;padding:0 18px;background:rgba(0,0,0,.35);border-top:1px solid var(--stroke);font-size:11.5px}
+.status .led{width:7px;height:7px;border-radius:50%;background:var(--cyan);box-shadow:0 0 6px var(--cyan)}
+.status .led.busy{background:var(--pink);box-shadow:0 0 6px var(--pink);animation:pulse 1s infinite}
+.status .txt{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:rgba(255,255,255,.8)}
+.bar{width:180px;height:5px;border-radius:9px;background:rgba(255,255,255,.12);overflow:hidden;display:none}
+.bar i{display:block;height:100%;background:var(--neon);width:0}
+
+/* 설정 */
+.modal{position:fixed;inset:0;z-index:10;background:rgba(0,0,0,.6);display:none;place-items:center}
+.modal.on{display:grid}
+.modal .card{width:560px;max-height:86vh;overflow:auto;margin:0;background:#140e1f}
+.toast{position:fixed;left:50%;top:18px;transform:translateX(-50%);z-index:20;background:#2a1020;border:1px solid #ff6b6b;color:#ffd1d1;padding:12px 18px;border-radius:14px;max-width:640px;display:none;box-shadow:0 10px 30px rgba(0,0,0,.5)}
+.toast.on{display:block}
+</style>
+</head>
+<body>
+<div class="aurora"><div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div></div>
+<div class="grain"></div>
+
+<div class="app">
+  <aside class="side">
+    <div class="logo"><div class="mark">▶</div><div><b>EDIT MAKER</b><small>for CapCut · After Effects</small></div></div>
+    <div id="steps"></div>
+    <div class="spacer"></div>
+    <div class="chips" id="sidechips"></div>
+    <div style="padding:12px 6px 0"><button class="ghost" onclick="openSettings()">⚙ 설정</button></div>
+  </aside>
+
+  <main class="main">
+    <!-- 1. 재료 -->
+    <section class="page" id="p-materials">
+      <h1>재료 넣기</h1>
+      <p class="sub">따라 하고 싶은 edit 영상(레퍼런스)과, 편집에 쓸 클립들을 끌어다 놓으세요.</p>
+      <div class="row">
+        <div class="card" id="refcard" style="flex:1"></div>
+        <div style="width:320px;flex:none">
+          <div class="card">
+            <div class="hd"><b>🎵 음악</b><span>선택</span></div>
+            <div id="musicinfo" class="hint" style="font-size:12px;color:rgba(255,255,255,.8)"></div>
+            <div style="display:flex;gap:6px;margin-top:10px"><button class="ghost" onclick="api().pick_music()">다른 음악</button><button class="ghost" id="musicclear" onclick="api().clear_music()">되돌리기</button></div>
+            <hr style="border:0;border-top:1px solid var(--stroke);margin:16px 0">
+            <div class="hd"><b>🎛 CC 자료 (.ffx)</b><span>AE용 · 선택</span></div>
+            <div class="hint">갖고 있는 After Effects 색보정·효과 프리셋을 넣으면 CC 레이어에 같이 적용해요.</div>
+            <div class="drop" id="presetdrop" style="padding:14px;margin-top:10px"><div id="presetlist"><small>.ffx 끌어다 놓기</small></div></div>
+            <button class="ghost" style="margin-top:8px" onclick="api().pick_presets()">파일 고르기</button>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="hd"><b>🎞 내 클립</b><span id="clipcount"></span><span class="grow"></span><button class="ghost" onclick="api().pick_clips()">＋ 추가</button></div>
+        <div class="drop" id="clipdrop" style="padding:14px"><div id="clipgrid"></div></div>
+      </div>
+      <div class="footer"><button class="btn big" id="tostyle" onclick="go('style')">다음: 스타일 고르기 →</button></div>
+    </section>
+
+    <!-- 2. 스타일 -->
+    <section class="page" id="p-style">
+      <h1>스타일 고르기</h1>
+      <p class="sub">잘 모르겠으면 전부 'AI 자동'으로 두세요. AI가 레퍼런스를 보고 골라요.</p>
+      <div class="row">
+        <div class="card" style="flex:1">
+          <div class="hd"><b>💬 자막</b><span>한 줄 = 자막 하나 · 비워 두면 자막 없이</span></div>
+          <textarea id="subs" placeholder="이거랑 같이 먹어야지&#10;씨러!&#10;오늘도 귀여움 한도 초과 ♡"></textarea>
+          <div class="hint">팁: 느낌표(!)가 있으면 임팩트, ?·~·ㅋ·♡가 있으면 귀여운 스타일, 긴 문장은 타자기 스타일을 먼저 고려해요.</div>
+        </div>
+        <div class="card" style="width:340px;flex:none">
+          <div class="hd"><b>✂ 편집</b></div>
+          <label class="f">만들 곳</label>
+          <div class="seg" id="outseg"><button data-v="capcut">CapCut</button><button data-v="ae">After Effects</button></div>
+          <div class="hint" id="outhint"></div>
+          <label class="f">화면 비율</label>
+          <select id="aspect"><option value="vertical">9:16 세로</option><option value="match">레퍼런스와 같게</option><option value="square">1:1</option><option value="horizontal">16:9 가로</option></select>
+          <label class="f">컷 타이밍</label>
+          <select id="cutmode"><option value="mix">둘 다 섞기</option><option value="reference">레퍼런스 컷 따라하기</option><option value="beats">음악 비트에 맞추기</option></select>
+          <label class="switch"><input type="checkbox" id="limit"> 길이 제한 <span id="limitv" class="hint" style="margin:0"></span></label>
+          <input type="range" id="maxlen" min="5" max="60" value="15" style="display:none">
+          <label class="f">효과 양 <span class="hint" id="effv"></span></label><input type="range" id="effect" min="0" max="100" value="60">
+          <label class="f">번짐(글로우) <span class="hint" id="bloomv"></span></label><input type="range" id="bloom" min="0" max="100" value="50">
+          <label class="switch"><input type="checkbox" id="useai" checked><span>AI 감독<br><span class="hint" id="aihint"></span></span></label>
+        </div>
+      </div>
+      <div class="card"><div class="hd"><b>🔤 자막 스타일</b><span>자막마다 다른 효과로 만들어져요</span></div><div class="cards" id="stylecards"></div></div>
+      <div class="card"><div class="hd"><b>🎨 CC (색보정)</b><span>색감 + 살짝 번지는 글로우</span></div><div class="cards" id="cccards"></div></div>
+      <div class="footer"><span id="genwarn"></span><button class="btn big" id="genbtn" onclick="generate()">✨ Edit 만들기</button></div>
+    </section>
+
+    <!-- 3. 만들기 -->
+    <section class="page" id="p-build">
+      <div class="center">
+        <div class="orb"><div class="ring" id="ring"></div><div class="pct" id="orbtxt">🪄</div></div>
+        <div class="title-neon" id="buildtitle">만드는 중</div>
+        <div id="buildstatus" style="color:rgba(255,255,255,.8);text-align:center;max-width:540px"></div>
+        <div class="card log" id="log"></div>
+        <div id="buildbtns" style="display:flex;gap:10px"></div>
+      </div>
+    </section>
+
+    <!-- 4. 검토 · 수정 -->
+    <section class="page" id="p-review">
+      <div class="rv">
+        <div class="vbar">
+          <div class="vtabs" id="vtabs"></div>
+          <button class="ghost" id="openproj" onclick="api().open_project(S.current)">↗ 열기</button>
+          <button class="ghost" onclick="api().reveal(S.current)">📁 폴더</button>
+          <button class="ghost" onclick="generate(true)" title="클립 배치와 효과를 새로 뽑아요">🔀 새로 섞기</button>
+        </div>
+        <div class="stage">
+          <div class="player"><video id="video" controls></video><div class="busy" id="pbusy"><div><div class="orb" style="width:110px;height:110px;margin:auto"><div class="ring"></div></div><div id="pbusytxt" style="margin-top:10px;font-weight:600"></div></div></div></div>
+          <div class="insp" id="insp"></div>
+        </div>
+        <div class="card tl" id="timeline" style="margin:0"></div>
+      </div>
+      <div class="chat">
+        <div class="top"><span>💬</span><b>수정 요청</b><label class="switch" style="margin:0;font-size:10.5px"><input type="checkbox" id="autob" checked>바로 반영</label></div>
+        <div class="msgs" id="msgs"></div>
+        <div class="quick" id="quick"></div>
+        <div class="ask"><textarea id="askin" placeholder="어디를 어떻게 바꿀까요? (Enter로 보내기)"></textarea><button class="send" onclick="sendAsk()">↑</button></div>
+      </div>
+    </section>
+
+    <div class="status"><div class="led" id="led"></div><div class="txt" id="stxt">준비 완료</div><div class="bar" id="sbar"><i></i></div></div>
+  </main>
+</div>
+
+<!-- 설정 -->
+<div class="modal" id="settings" onclick="if(event.target===this)closeSettings()">
+  <div class="card">
+    <div class="hd"><b style="font-size:18px">⚙ 설정</b><span class="grow"></span><button class="ghost" onclick="closeSettings()">닫기</button></div>
+    <label class="f">CapCut 프로젝트 폴더</label>
+    <div class="hint" id="ccroot" style="word-break:break-all"></div>
+    <div style="display:flex;gap:6px;margin-top:6px"><button class="ghost" onclick="pickRoot()">폴더 고르기</button><button class="ghost" onclick="saveS({capcutRoot:''})">기본값</button></div>
+    <div class="hint">처음 한 번: CapCut(PC)을 열어 아무 프로젝트나 만들었다 닫아 주세요. 만든 뒤 홈 화면에 안 보이면 CapCut을 완전히 껐다 켜 주세요.</div>
+    <label class="f">After Effects 버전</label>
+    <select id="aesel" onchange="saveS({aeApp:this.value})"></select>
+    <div class="hint">AE 사용 시 한 번만: 편집 › 환경 설정 › 스크립팅 및 표현식 › '스크립트가 파일을 쓰고 네트워크에 액세스하도록 허용' 켜기</div>
+    <hr style="border:0;border-top:1px solid var(--stroke);margin:16px 0">
+    <label class="f">AI 감독 (선택)</label>
+    <div class="seg" id="aiseg"><button data-v="claude">Claude</button><button data-v="gemini">Gemini</button></div>
+    <label class="f">Claude API 키</label><input type="password" id="kc" placeholder="sk-ant-...">
+    <label class="f">Gemini API 키</label><input type="password" id="kg" placeholder="AQ.... 또는 AIza...">
+    <div style="display:flex;gap:6px;margin-top:10px;align-items:center"><button class="btn" onclick="saveKeys()">저장</button><button class="ghost" onclick="testAI()">연결 테스트</button><span id="aitest" class="hint" style="margin:0"></span></div>
+    <div class="hint">키는 이 PC의 Windows 자격 증명 관리자에 저장돼요. 사용량만큼 각 회사에 요금이 나가요. 키가 없어도 만들 수 있고, 수정은 타임라인에서 직접 할 수 있어요.</div>
+    <hr style="border:0;border-top:1px solid var(--stroke);margin:16px 0">
+    <label class="f">자막 폰트 (Google Fonts 무료)</label>
+    <div class="hint" id="fontst"></div>
+    <button class="ghost" style="margin-top:6px" onclick="api().install_fonts()">지금 받기</button>
+  </div>
+</div>
+<div class="toast" id="toast" onclick="this.classList.remove('on')"></div>
+
+<script>
+const api = () => window.pywebview.api;
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const STEPS = [["materials","재료","레퍼런스와 클립","🧩"],["style","스타일","자막 · CC · 효과","🪄"],["build","만들기","프로젝트 만들기","⚡"],["review","검토 · 수정","보고 고쳐 달라고 하기","🎬"]];
+const TC = {zoom_punch:"#FF3DAE",flash:"#fff",blur_in:"#8C54FF",radial_blur:"#59F2FF",whip:"#3399FF",none:"rgba(255,255,255,.35)"};
+let ST = {}, S = {clips:[],versions:[],chat:[]}, step = "materials", O = {output:"capcut", style:"auto", cc:"auto"}, draft = null, sel = null, logs = [], thumbs = {};
+
+function go(s){ step = s; renderSteps(); document.querySelectorAll(".page").forEach(p => p.classList.toggle("on", p.id === "p-"+s)); if(s==="review") renderReview(); }
+function stepEnabled(s){ return s==="materials" || (s==="style" && S.reference) || (s==="build" && (S.busy || logs.length)) || (s==="review" && S.versions.length) }
+function renderSteps(){
+  $("steps").innerHTML = STEPS.map(([id,t,sub,ic],i) => `<button class="step ${step===id?"on":""}" ${stepEnabled(id)?"":"disabled"} onclick="go('${id}')"><span class="dot">${ic}</span><span><b>${i+1}. ${t}</b><small>${sub}</small></span></button>`).join("");
+  const out = O.output === "ae" ? (ST.aeApps?.length ? [`✔ ${ST.aeApps[0].replace("Adobe ","")}`,"#59F2FF"] : ["⚠ After Effects 없음","orange"]) : (ST.capcutOK ? ["✔ CapCut 연결됨","#59F2FF"] : ["⚠ CapCut 폴더 없음","orange"]);
+  $("sidechips").innerHTML = `<span class="chip" style="--c:${out[1]}">${out[0]}</span>` + (ST.ai ? `<span class="chip" style="--c:#FF3DAE">✨ AI 감독 · ${ST.ai==="claude"?"Claude":"Gemini"}</span>` : `<span class="chip" style="--c:rgba(255,255,255,.6)">✨ AI 키 없음 (규칙 모드)</span>`);
+}
+
+/* ---------- 재료 ---------- */
+function renderMaterials(){
+  const a = S.analysis;
+  if(!S.reference){
+    $("refcard").className = "card";
+    $("refcard").innerHTML = `<div class="hd"><b>📽 레퍼런스 영상</b><span>컷 타이밍 · 비트 · 색감을 따라 해요</span></div>
+      <div class="drop" id="refdrop"><div class="big">✨</div><b>레퍼런스 edit 영상을 여기에 끌어다 놓기</b><small>틱톡·릴스에서 저장한 edit 영상 (mp4, mov)</small><div style="margin-top:14px"><button class="btn" onclick="api().pick_reference()">파일 고르기</button></div></div>`;
+    bindDrop($("refdrop"), p => p[0] && api().set_reference(p[0]));
+  } else {
+    $("refcard").className = "card" + (a ? " glow" : "");
+    const frames = a ? a.frames.map(f => `<img src="${f}">`).join("") : "";
+    $("refcard").innerHTML = `<div class="hd"><b>📽 레퍼런스 영상</b><span>컷 타이밍 · 비트 · 색감을 따라 해요</span></div>
+      <div class="frames">${frames || '<div class="hint" style="padding:60px 0;flex:1;text-align:center">분석 중…</div>'}</div>
+      <div style="display:flex;align-items:center;margin-top:10px"><b style="flex:1;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(S.reference.split(/[\\/]/).pop())}</b><button class="ghost" onclick="api().pick_reference()">바꾸기</button></div>
+      ${a ? `<div class="chiprow"><span class="chip">⏱ ${a.duration.toFixed(1)}초</span><span class="chip" style="--c:#FF3DAE">✂ 컷 ${a.cuts}개</span><span class="chip" style="--c:#59F2FF">♩ ${Math.round(a.bpm)} BPM</span><span class="chip" style="--c:#FFD54A">⚡ 에너지 ${Math.round(a.energy*100)}</span><span class="chip"><i style="width:11px;height:11px;border-radius:50%;background:${a.color};display:inline-block"></i> 색감</span></div>` : ""}`;
+  }
+  $("musicinfo").textContent = S.music ? "🎼 " + S.music.split(/[\\/]/).pop() : "레퍼런스 영상의 소리를 그대로 써요";
+  $("musicclear").style.display = S.music ? "" : "none";
+  $("presetlist").innerHTML = S.presets.length ? S.presets.map(p => `<div style="display:flex;gap:6px;align-items:center;font-size:11px;text-align:left"><span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">🎛 ${esc(p.split(/[\\/]/).pop())}</span><button class="ghost" style="padding:2px 8px" onclick='api().remove_preset(${JSON.stringify(p)})'>✕</button></div>`).join("") : "<small>.ffx 끌어다 놓기</small>";
+  $("clipcount").textContent = `${S.clips.length}개 · 영상이나 사진`;
+  $("clipgrid").innerHTML = S.clips.length ? `<div class="grid">${S.clips.map((c,i) => `<div class="tile" title="${esc(c.name)}"><img data-thumb="${i}"><span class="len">${c.isStill ? "사진" : c.duration.toFixed(1)+"초"}</span><button class="x" onclick='api().remove_clip(${JSON.stringify(c.path)})'>✕</button></div>`).join("")}</div>`
+    : `<div style="padding:30px"><div class="big" style="font-size:34px">🎞</div><b style="display:block;margin:8px 0 4px;font-size:13px">편집에 쓸 클립들을 한꺼번에 끌어다 놓기</b><small style="color:var(--dim)">직캠, 무대, 브이로그 클립 등 · 많을수록 다양해져요</small></div>`;
+  S.clips.forEach((c,i) => loadThumb(c.path, c.isStill ? 0 : c.duration*0.3, document.querySelector(`[data-thumb="${i}"]`)));
+  $("tostyle").disabled = !(S.reference && S.clips.length);
+}
+async function loadThumb(path, t, img){
+  if(!img) return;
+  const key = path + "#" + t.toFixed(2);
+  if(!(key in thumbs)) thumbs[key] = await api().thumb(path, t, 240);
+  if(thumbs[key]) img.src = thumbs[key];
+}
+function bindDrop(el, fn){
+  if(!el || el._b) return; el._b = true;
+  el.addEventListener("dragover", e => { e.preventDefault(); el.classList.add("over"); });
+  el.addEventListener("dragleave", () => el.classList.remove("over"));
+  el.addEventListener("drop", e => {
+    e.preventDefault(); el.classList.remove("over");
+    const paths = [...e.dataTransfer.files].map(f => f.pywebviewFullPath || f.path).filter(Boolean);
+    if(paths.length) fn(paths); else toast("이 방식으로는 파일 경로를 못 읽었어요. '파일 고르기' 버튼을 써 주세요.");
+  });
+}
+document.addEventListener("dragover", e => e.preventDefault());
+document.addEventListener("drop", e => e.preventDefault());
+
+/* ---------- 스타일 ---------- */
+function renderStyle(){
+  document.querySelectorAll("#outseg button").forEach(b => b.classList.toggle("on", b.dataset.v === O.output));
+  $("outhint").textContent = O.output === "ae" ? "After Effects 프로젝트(.aep)를 만들어요. 효과가 가장 화려해요." : "CapCut 홈 화면에 프로젝트가 생겨요. 컷·음악·자막·줌 움직임이 깔려 있고, 필터·전환은 CapCut에서 더 얹으면 돼요.";
+  $("aihint").textContent = ST.ai ? "레퍼런스 장면을 보고 자막·효과를 다듬어요" : "설정에서 API 키를 넣으면 켜져요";
+  $("useai").disabled = !ST.ai; if(!ST.ai) $("useai").checked = false;
+  $("effv").textContent = $("effect").value; $("bloomv").textContent = $("bloom").value;
+  $("maxlen").style.display = $("limit").checked ? "" : "none"; $("limitv").textContent = $("limit").checked ? $("maxlen").value + "초" : "";
+  const auto = (on, d, fn) => `<button class="sel ${on?"on":""}" onclick="${fn}"><div class="pv auto">✨ AUTO</div><b>AI 자동</b><small>${d}</small></button>`;
+  $("stylecards").innerHTML = auto(O.style==="auto","자막 내용과 레퍼런스에 맞춰 자막마다 다르게","O.style='auto';renderStyle()") +
+    (ST.styles||[]).map(s => `<button class="sel ${O.style===s.id?"on":""}" onclick="O.style='${s.id}';renderStyle()"><div class="pv"><span class="st-${s.id}">씨러!</span></div><b>${s.name}</b><small>${s.detail}</small></button>`).join("");
+  const ccc = {dreamy_glow:"#ffb3e6,#9973f2",vivid_pop:"#ff4d66,#ffcc33",soft_film:"#f2cc99,#99735a",cool_night:"#334099,#8c66e6",clean:"#d9d9d9,#808080"};
+  $("cccards").innerHTML = auto(O.cc==="auto","레퍼런스 색감을 분석해서","O.cc='auto';renderStyle()") +
+    (ST.ccPresets||[]).map(c => `<button class="sel ${O.cc===c.id?"on":""}" onclick="O.cc='${c.id}';renderStyle()"><div class="pv" style="background:linear-gradient(135deg,${ccc[c.id]})"></div><b>${c.name}</b><small>${c.detail}</small></button>`).join("");
+  const can = O.output === "ae" ? ST.aeApps?.length : ST.capcutOK;
+  $("genwarn").innerHTML = can ? "" : `<span class="chip" style="--c:orange">⚠ ${O.output==="ae"?"After Effects를 찾지 못했어요":"CapCut 프로젝트 폴더를 못 찾았어요"} · 설정에서 확인</span>`;
+  $("genbtn").disabled = !(S.analysis && S.clips.length && !S.busy && can);
+}
+["effect","bloom","maxlen","limit"].forEach(id => document.addEventListener("input", e => { if(e.target.id===id) renderStyle(); }));
+document.querySelectorAll("#outseg button").forEach(b => b.onclick = async () => { O.output = b.dataset.v; ST = await api().save_settings({output:O.output}); renderStyle(); renderSteps(); });
+
+function generate(reshuffle=false){
+  const opts = {aspect:$("aspect").value, cutMode:$("cutmode").value, maxLength:$("limit").checked ? +$("maxlen").value : 0,
+    ccPreset:O.cc, subtitleStyle:O.style, effectAmount:$("effect").value/100, bloom:$("bloom").value/100,
+    subtitles:$("subs").value, useAI:$("useai").checked};
+  api().generate(opts, reshuffle).then(ok => { if(ok && !reshuffle) go("build"); });
+}
+
+/* ---------- 만들기 ---------- */
+function renderBuild(st){
+  $("ring").classList.toggle("idle", !S.busy);
+  $("buildtitle").textContent = S.busy ? "만드는 중" : "대기 중";
+  if(st) $("buildstatus").textContent = st.text || "";
+  $("orbtxt").textContent = st && st.progress != null ? Math.round(st.progress*100)+"%" : (S.busy ? "🪄" : "🌙");
+  $("buildbtns").innerHTML = S.busy ? "" : `<button class="ghost" onclick="go('style')">스타일로 돌아가기</button>` + (S.versions.length ? "" : `<button class="btn" onclick="generate()">다시 시도</button>`);
+}
+
+/* ---------- 검토 ---------- */
+let curVideo = null;
+function curV(){ return S.versions.find(v => v.number === S.current); }
+function renderReview(){
+  const v = curV(); if(!v) return;
+  if(!draft || draft._v !== v.number){ draft = JSON.parse(JSON.stringify(v.plan)); draft._v = v.number; sel = null; }
+  $("vtabs").innerHTML = S.versions.map(x => `<button class="vtab ${x.number===S.current?"on":""}" title="${esc(x.note)}" onclick="api().select_version(${x.number})"><b>v${x.number}</b><span>${esc(x.note)}</span></button>`).join("");
+  $("openproj").textContent = v.kind === "ae" ? "↗ AE에서 열기" : "↗ CapCut 열기";
+  if(curVideo !== v.previewUrl){ curVideo = v.previewUrl; $("video").src = v.previewUrl || ""; if(v.previewUrl) $("video").play().catch(()=>{}); }
+  $("pbusy").classList.toggle("on", !!S.busy);
+  renderTimeline(); renderInspector(); renderChat();
+}
+function renderTimeline(){
+  const p = draft, D = p.duration, pct = t => (t/D*100).toFixed(3)+"%";
+  let h = p.beats.map(b => `<div class="beat" style="left:${pct(b)}"></div>`).join("");
+  h += `<div class="lane">` + p.segments.map(s => `<div class="seg ${sel&&sel[0]==="seg"&&sel[1]===s.id?"sel-on":""}" data-seg="${s.id}" style="left:${pct(s.start)};width:calc(${pct(s.end-s.start)} - 2px);--tc:${TC[s.transition]||TC.none}" title="${s.id}번 컷"></div>`).join("") + `</div>`;
+  h += p.subtitles.map(s => `<div class="subb ${sel&&sel[0]==="sub"&&sel[1]===s.id?"sel-on":""}" data-sub="${s.id}" style="left:${pct(s.start)};width:calc(${pct(s.end-s.start)} - 2px);background:${s.accent}aa">${esc(s.text.replace(/\n/g," "))}</div>`).join("");
+  h += `<div class="head" id="head"></div>`;
+  $("timeline").innerHTML = `<div style="position:relative;height:100%">${h}</div>`;
+  p.segments.forEach(s => loadThumbBg(s.clip, s.clipIn+0.1, document.querySelector(`[data-seg="${s.id}"]`)));
+  $("timeline").querySelectorAll("[data-seg]").forEach(el => el.onclick = e => { e.stopPropagation(); const s = p.segments.find(x => x.id == el.dataset.seg); sel = ["seg", s.id]; seek(s.start); renderTimeline(); renderInspector(); });
+  $("timeline").querySelectorAll("[data-sub]").forEach(el => el.onclick = e => { e.stopPropagation(); const s = p.subtitles.find(x => x.id == el.dataset.sub); sel = ["sub", s.id]; seek(s.start+0.05); renderTimeline(); renderInspector(); });
+  $("timeline").onclick = e => { const r = $("timeline").firstChild.getBoundingClientRect(); seek((e.clientX - r.left)/r.width*D); };
+}
+async function loadThumbBg(path, t, el){ if(!el) return; const key = path+"#"+t.toFixed(2); if(!(key in thumbs)) thumbs[key] = await api().thumb(path, t, 120); if(thumbs[key]) el.style.backgroundImage = `url(${thumbs[key]})`; }
+function seek(t){ const vd = $("video"); if(vd.src) vd.currentTime = t; }
+setInterval(() => { const h = $("head"); if(h && draft){ h.style.left = Math.min($("video").currentTime/draft.duration*100, 100) + "%"; } }, 50);
+
+function changed(){ const v = curV(); if(!v) return false; const a = JSON.parse(JSON.stringify(draft)); delete a._v; return JSON.stringify(a) !== JSON.stringify(v.plan); }
+function opt(list, cur){ return list.map(x => `<option value="${x.id}" ${x.id===cur?"selected":""}>${esc(x.name)}</option>`).join(""); }
+function rng(label, path, min, max, step, val, fmt){ return `<label class="f">${label} <span class="hint">${fmt?fmt(val):val}</span></label><input type="range" min="${min}" max="${max}" step="${step}" value="${val}" oninput="setD('${path}', +this.value)">`; }
+function setD(path, val){ const ks = path.split("."); let o = draft; ks.slice(0,-1).forEach(k => o = o[k]); o[ks.at(-1)] = val; renderInspector(true); renderTimeline(); }
+function renderInspector(keepFocus){
+  const p = draft; let h = "";
+  if(sel && sel[0] === "seg"){
+    const i = p.segments.findIndex(s => s.id === sel[1]), s = p.segments[i];
+    const clip = S.clips.find(c => c.path === s.clip) || {duration:1};
+    h = `<div class="hd"><b>✂ ${s.id}번 컷</b><span>${s.start.toFixed(2)} – ${s.end.toFixed(2)}초</span></div>
+      <label class="f">클립</label><select onchange="setD('segments.${i}.clip', this.value)">${S.clips.map(c => `<option value="${esc(c.path)}" ${c.path===s.clip?"selected":""}>${esc(c.name)}</option>`).join("")}</select>
+      ${rng("클립 시작(초)", `segments.${i}.clipIn`, 0, Math.max(clip.duration - (s.end-s.start)*s.speed, 0.01).toFixed(2), 0.05, s.clipIn, v => (+v).toFixed(1))}
+      <label class="f">전환</label><select onchange="setD('segments.${i}.transition', this.value)">${opt(ST.transitions, s.transition)}</select>
+      ${rng("속도", `segments.${i}.speed`, 0.25, 2, 0.05, s.speed, v => (+v).toFixed(2)+"x")}
+      ${rng("천천히 줌인", `segments.${i}.push`, 0, 0.3, 0.01, s.push)}
+      <label class="switch"><input type="checkbox" ${s.shake?"checked":""} onchange="setD('segments.${i}.shake', this.checked)">흔들림</label>
+      <button class="ghost" onclick="sel=null;renderInspector();renderTimeline()">선택 해제</button>`;
+  } else if(sel && sel[0] === "sub"){
+    const i = p.subtitles.findIndex(s => s.id === sel[1]), s = p.subtitles[i];
+    if(i < 0){ sel = null; return renderInspector(); }
+    h = `<div class="hd"><b>💬 자막 ${s.id}</b><span>${s.start.toFixed(2)} – ${s.end.toFixed(2)}초</span></div>
+      <div class="pv" style="margin-bottom:6px"><span class="st-${s.style}" style="font-size:20px;color:${s.color}">${esc(s.text.split("\n")[0].slice(0,8))}</span></div>
+      <label class="f">내용</label><textarea style="height:60px" onchange="setD('subtitles.${i}.text', this.value)">${esc(s.text)}</textarea>
+      <label class="f">스타일</label><select onchange="setD('subtitles.${i}.style', this.value)">${opt(ST.styles, s.style)}</select>
+      <label class="f">폰트</label><select onchange="setD('subtitles.${i}.font', this.value)">${opt(ST.fonts, s.font)}</select>
+      <div style="display:flex;gap:10px;margin-top:10px"><label>글자색 <input type="color" value="${s.color}" onchange="setD('subtitles.${i}.color', this.value.toUpperCase())"></label><label>테두리·빛 <input type="color" value="${s.accent}" onchange="setD('subtitles.${i}.accent', this.value.toUpperCase())"></label></div>
+      ${rng("크기", `subtitles.${i}.size`, 30, 240, 1, s.size)}
+      ${rng("높이", `subtitles.${i}.y`, 0.1, 0.9, 0.01, s.y)}
+      ${rng("시작(초)", `subtitles.${i}.start`, 0, Math.max(p.duration-0.3, 0.1).toFixed(2), 0.05, s.start, v => (+v).toFixed(2))}
+      ${rng("끝(초)", `subtitles.${i}.end`, 0.2, p.duration, 0.05, s.end, v => (+v).toFixed(2))}
+      <div style="display:flex;gap:6px;margin-top:10px"><button class="ghost" onclick="sel=null;renderInspector();renderTimeline()">선택 해제</button><button class="ghost" onclick="draft.subtitles.splice(${i},1);sel=null;renderInspector();renderTimeline()">🗑 삭제</button></div>`;
+  } else {
+    h = `<div class="hd"><b>🎚 직접 고치기</b></div><div class="hint" style="font-size:12px">아래 타임라인에서 컷이나 자막을 누르면 여기서 바로 고칠 수 있어요. 말로 부탁하려면 오른쪽 채팅을 쓰세요.</div>
+      <label class="f">CC 프리셋</label><select onchange="setD('cc.preset', this.value)">${opt(ST.ccPresets, p.cc.preset)}</select>
+      ${rng("색보정 세기", "cc.intensity", 0, 1, 0.01, p.cc.intensity)}${rng("번짐(글로우)", "cc.bloom", 0, 1, 0.01, p.cc.bloom)}
+      ${rng("그레인", "cc.grain", 0, 1, 0.01, p.cc.grain)}${rng("비네팅", "cc.vignette", 0, 1, 0.01, p.cc.vignette)}
+      <button class="ghost" style="margin-top:10px" onclick="addSub()">＋ 자막 추가 (지금 위치)</button>`;
+  }
+  if(changed()) h += `<hr style="border:0;border-top:1px solid var(--stroke);margin:14px 0"><button class="btn" style="width:100%" ${S.busy?"disabled":""} onclick="rebuild()">🔁 바꾼 내용으로 다시 만들기</button><button class="ghost" style="margin-top:8px" onclick="draft=null;renderReview()">되돌리기</button>`;
+  const ae = document.activeElement, keep = keepFocus && ae && ae.type === "range" ? [...$("insp").querySelectorAll("input[type=range]")].indexOf(ae) : -1;
+  $("insp").innerHTML = `<div class="card">${h}</div>`;
+  if(keep >= 0) $("insp").querySelectorAll("input[type=range]")[keep]?.focus();
+}
+function addSub(){
+  const t = $("video").currentTime || 0, base = draft.subtitles[0] || {style:"neon_glow",font:"BlackHanSans-Regular",size:84,color:"#FFFFFF",accent:"#FF3DAE",x:.5,y:.55};
+  draft.subtitles.push({...base, id: Math.max(0, ...draft.subtitles.map(s => s.id)) + 1, text:"새 자막", start:+t.toFixed(2), end:+Math.min(t+1.5, draft.duration).toFixed(2)});
+  sel = ["sub", draft.subtitles.at(-1).id]; renderTimeline(); renderInspector();
+}
+function rebuild(){ const p = JSON.parse(JSON.stringify(draft)); delete p._v; api().rebuild(p); }
+
+const QUICK = ["자막 더 크게","효과 좀 줄여줘","더 몽환적으로 번지게","컷 더 빠르게","색감 더 쨍하게","자막 핑크 네온으로","마지막에 줌 펀치 세게"];
+function renderChat(){
+  $("msgs").innerHTML = (S.chat.length ? "" : `<div class="bub assistant">영상을 보고 마음에 안 드는 부분을 편하게 말해 주세요.<br><span style="color:var(--dim)">예) "2번째 자막 노란색으로", "처음 3초는 슬로모션", "플래시 다 빼줘"</span></div>`)
+    + S.chat.map(m => `<div class="bub ${m.role}">${esc(m.text)}</div>`).join("") + (S.busy && /수정/.test($("stxt").textContent) ? `<div class="bub assistant">고치는 중…</div>` : "");
+  $("msgs").scrollTop = 1e9;
+  $("quick").innerHTML = QUICK.map(q => `<button class="ghost" ${S.busy?"disabled":""} onclick='ask(${JSON.stringify(q)})'>${q}</button>`).join("");
+}
+function ask(t){ const p = draft ? JSON.parse(JSON.stringify(draft)) : null; if(p) delete p._v; api().revise(t, p, $("autob").checked); }
+function sendAsk(){ const t = $("askin").value.trim(); if(!t || S.busy) return; $("askin").value = ""; ask(t); }
+$("askin").addEventListener("keydown", e => { if(e.key === "Enter" && !e.shiftKey){ e.preventDefault(); sendAsk(); } });
+
+/* ---------- 설정 ---------- */
+function openSettings(){ renderSettings(); $("settings").classList.add("on"); }
+function closeSettings(){ $("settings").classList.remove("on"); }
+function renderSettings(){
+  $("ccroot").textContent = (ST.capcutOK ? "✅ " : "⚠ 폴더 없음 · ") + ST.capcutRoot;
+  $("aesel").innerHTML = ST.aeApps?.length ? ST.aeApps.map(n => `<option ${n===ST.aeSelected?"selected":""}>${esc(n)}</option>`).join("") : "<option>찾지 못했어요</option>";
+  document.querySelectorAll("#aiseg button").forEach(b => { b.classList.toggle("on", b.dataset.v === ST.aiProvider); b.onclick = () => saveS({aiProvider:b.dataset.v}); });
+  $("kc").placeholder = ST.hasClaude ? "저장됨 (바꾸려면 새로 입력)" : "sk-ant-..."; $("kg").placeholder = ST.hasGemini ? "저장됨 (바꾸려면 새로 입력)" : "AQ.... 또는 AIza...";
+  $("fontst").textContent = ST.fontsMissing?.length ? "아직 안 받은 폰트: " + ST.fontsMissing.join(", ") + " (처음 만들 때 자동으로 받아요)" : "✅ 모두 설치돼 있어요";
+}
+async function saveS(s){ ST = await api().save_settings(s); renderSettings(); renderSteps(); renderStyle(); }
+async function pickRoot(){ ST = await api().pick_capcut_root(); renderSettings(); renderSteps(); renderStyle(); }
+async function saveKeys(){ const s = {}; if($("kc").value) s.claudeKey = $("kc").value; if($("kg").value) s.geminiKey = $("kg").value; $("kc").value = $("kg").value = ""; await saveS(s); $("aitest").textContent = "저장됨"; }
+async function testAI(){ $("aitest").textContent = "확인 중…"; const r = await api().test_ai(); $("aitest").textContent = r.text; }
+
+/* ---------- 파이썬 → 화면 ---------- */
+function toast(t){ $("toast").textContent = t; $("toast").classList.add("on"); clearTimeout(toast._t); toast._t = setTimeout(() => $("toast").classList.remove("on"), 9000); }
+window.onEvent = ev => {
+  if(ev.kind === "status"){
+    $("stxt").textContent = ev.text || "준비 완료"; $("led").classList.toggle("busy", !!ev.busy);
+    $("sbar").style.display = ev.progress != null ? "" : "none"; if(ev.progress != null) $("sbar").firstChild.style.width = ev.progress*100+"%";
+    S.busy = !!ev.busy || S.busy; renderBuild(ev); $("pbusytxt").textContent = ev.text || "";
+    if(ev.text && /완성|문제/.test(ev.text)) S.busy = false;
+    $("pbusy").classList.toggle("on", !!S.busy && step==="review");
+  } else if(ev.kind === "log"){
+    logs.push(ev.text); $("log").textContent = logs.join("\n"); $("log").scrollTop = 1e9; renderSteps();
+  } else if(ev.kind === "error"){
+    toast("문제가 생겼어요: " + ev.text);
+  } else if(ev.kind === "snapshot"){
+    S = ev.data; renderAll();
+  } else if(ev.kind === "built"){
+    draft = null; go("review");
+  } else if(ev.kind === "draft"){
+    draft = ev.plan; draft._v = S.current; renderReview();
+  }
+};
+function renderAll(){ renderSteps(); renderMaterials(); renderStyle(); renderBuild(); if(step === "review") renderReview(); }
+
+window.addEventListener("pywebviewready", async () => {
+  ST = await api().state(); S = await api().snapshot(); O.output = ST.output;
+  bindDrop($("clipdrop"), p => api().add_paths(p));
+  bindDrop($("presetdrop"), p => api().add_paths(p.filter(x => x.toLowerCase().endsWith(".ffx"))));
+  renderAll(); go("materials");
+});
+</script>
+</body>
+</html>

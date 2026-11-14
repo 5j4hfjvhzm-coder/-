@@ -4,3 +4,7 @@ DerivedData/
 *.xcuserstate
 build/
 *.zip
+__pycache__/
+EditMakerWin/dist/
+EditMakerWin/build/
+*.spec

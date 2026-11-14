@@ -1,0 +1,53 @@
+name: Build EditMaker for Windows
+
+on:
+  push:
+    paths:
+      - "EditMakerWin/**"
+      - ".github/workflows/build-windows.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: EditMakerWin
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: python -m pip install -r requirements.txt pyinstaller
+
+      - name: Smoke test (analysis, preview, CapCut draft, AE script)
+        run: python tests/smoke.py
+
+      - name: Build EditMaker.exe
+        run: >
+          pyinstaller --noconfirm --onefile --windowed --name EditMaker --icon ui\icon.ico
+          --add-data "ui;ui" --add-data "editmaker\ae_template.jsx;editmaker"
+          --collect-data imageio_ffmpeg --collect-all webview app.py
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: EditMaker-windows
+          path: EditMakerWin/dist/EditMaker.exe
+
+      - name: Publish download (GitHub Release)
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: editmaker-win-${{ github.run_number }}
+          name: EditMaker for Windows (build ${{ github.run_number }})
+          target_commitish: ${{ github.sha }}
+          prerelease: true
+          files: EditMakerWin/dist/EditMaker.exe
+          body: |
+            에딧 메이커 Windows 버전. EditMaker.exe 를 받아서 더블클릭하면 실행돼요.
+            처음 실행할 때 "Windows의 PC 보호" 창이 뜨면 "추가 정보" → "실행"을 누르세요. (서명되지 않은 앱이라 뜨는 경고예요)

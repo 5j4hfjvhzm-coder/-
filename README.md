@@ -93,3 +93,5 @@ BlankVocab/
 # 에딧 메이커 (macOS)
 
 After Effects로 K-pop edit 영상을 자동으로 만드는 맥 앱은 [`EditMaker/`](EditMaker/README.md) 폴더에 있어요.
+
+Windows 버전은 [`EditMakerWin/`](EditMakerWin/README.md) 폴더에 있어요. (Releases에서 `EditMaker.exe` 받기)
