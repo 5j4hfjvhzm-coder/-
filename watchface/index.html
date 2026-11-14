@@ -1,0 +1,267 @@
+<title>Verde Diver Watch Face</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=Inter:wght@400;500;600&display=swap">
+<style>
+/* Layout: one centered watch on a dark stage, style switches below, short how-to underneath. Single dark look by choice. */
+:root {
+  --stage: #0b0f0d;
+  --panel: #131a16;
+  --line: #26332c;
+  --fg: #e7ece8;
+  --muted: #94a39a;
+  --green: #1f8a4c;
+  --gold: #d9c38a;
+  --font-display: "Cormorant Garamond", Georgia, "Times New Roman", serif;
+  --font-body: "Inter", system-ui, -apple-system, sans-serif;
+  color-scheme: dark;
+}
+html, body { background: var(--stage); color: var(--fg); }
+body {
+  font-family: var(--font-body);
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 32px 48px;
+}
+.wrap { max-width: 560px; margin: 0 auto; display: flex; flex-direction: column; align-items: center; gap: 28px; }
+header { text-align: center; display: flex; flex-direction: column; gap: 6px; }
+h1 { font-family: var(--font-display); font-weight: 600; font-size: 2.2rem; letter-spacing: .04em; margin: 0; text-wrap: balance; }
+.sub { color: var(--muted); font-size: .9rem; margin: 0; }
+
+.case {
+  width: min(340px, 100%);
+  aspect-ratio: 410 / 502;
+  max-width: 100%;
+  background: #000;
+  border-radius: 22% / 18%;
+  padding: 3.5%;
+  box-shadow: 0 0 0 10px #2a2d2c, 0 0 0 11px #4a4f4d, 0 30px 60px rgba(0,0,0,.6);
+  position: relative;
+}
+.case::after { /* digital crown */
+  content: ""; position: absolute; right: -19px; top: 26%; width: 9px; height: 16%;
+  background: linear-gradient(90deg, #555a58, #8b918e, #4a4f4d); border-radius: 0 4px 4px 0;
+}
+#face { width: 100%; height: 100%; display: block; border-radius: 18% / 15%; }
+
+.controls { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+.controls button {
+  font: 500 .85rem var(--font-body); color: var(--fg); background: var(--panel);
+  border: 1px solid var(--line); border-radius: 999px; padding: 8px 14px; cursor: pointer;
+  display: inline-flex; align-items: center; gap: 8px;
+}
+.controls button[aria-pressed="true"] { border-color: var(--gold); color: var(--gold); }
+.controls button:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+.sw { width: 14px; height: 14px; border-radius: 50%; display: inline-block; border: 1px solid #0006; }
+
+.howto { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 18px 20px; width: 100%; box-sizing: border-box; }
+.howto h2 { font: 600 .78rem var(--font-body); letter-spacing: .12em; text-transform: uppercase; color: var(--gold); margin: 0 0 10px; }
+.howto ol { margin: 0; padding-left: 1.2em; display: flex; flex-direction: column; gap: 6px; line-height: 1.55; font-size: .92rem; color: var(--fg); }
+.howto p { margin: 12px 0 0; color: var(--muted); font-size: .82rem; line-height: 1.5; }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>VERDE</h1>
+    <p class="sub">그린 세라믹 베젤 다이버 스타일 · 실시간 아날로그</p>
+  </header>
+
+  <div class="case"><svg id="face" viewBox="0 0 410 502" role="img" aria-label="초록 다이버 시계 화면, 현재 시각 표시"></svg></div>
+
+  <div class="controls" role="group" aria-label="다이얼 스타일">
+    <button id="s-green" data-style="green" aria-pressed="true"><span class="sw" style="background:radial-gradient(#2fa35e,#0d4a27)"></span>그린 다이얼</button>
+    <button id="s-black" data-style="black" aria-pressed="false"><span class="sw" style="background:radial-gradient(#2fa35e 40%,#111 41%)"></span>블랙 다이얼</button>
+    <button id="s-hands" aria-pressed="true">바늘 표시</button>
+  </div>
+
+  <section class="howto">
+    <h2>애플 워치에 적용하기</h2>
+    <ol>
+      <li>함께 보낸 PNG(바늘 없는 다이얼)를 iPhone 사진 앱에 저장합니다.</li>
+      <li>Watch 앱 → 페이스 갤러리 → <b>사진</b> 페이스 → 사진 선택에서 이미지를 고릅니다.</li>
+      <li>시계 화면에서 길게 눌러 편집 → 시간 위치를 위나 아래로 정합니다.</li>
+    </ol>
+    <p>Apple은 직접 만든 아날로그 바늘 페이스 설치를 허용하지 않아서, 시계 위에서는 이 다이얼 위에 디지털 시간이 표시됩니다. 움직이는 바늘 버전은 이 페이지에서 볼 수 있습니다.</p>
+  </section>
+</div>
+
+<script>
+const NS = "http://www.w3.org/2000/svg";
+const svg = document.getElementById("face");
+const W = 410, H = 502, CX = 205, CY = 251;
+const R_BEZEL_OUT = 200, R_BEZEL_IN = 160, R_DIAL = 150;
+let style = "green", showHands = true;
+
+function el(tag, attrs, parent) {
+  const n = document.createElementNS(NS, tag);
+  for (const k in attrs) n.setAttribute(k, attrs[k]);
+  (parent || svg).appendChild(n);
+  return n;
+}
+const pol = (r, deg) => { const a = (deg - 90) * Math.PI / 180; return [CX + r * Math.cos(a), CY + r * Math.sin(a)]; };
+
+function build() {
+  svg.innerHTML = "";
+  const dialIn = style === "green" ? "#2a9a57" : "#1c1f1e";
+  const dialMid = style === "green" ? "#127238" : "#0e100f";
+  const dialOut = style === "green" ? "#06341a" : "#030404";
+
+  const defs = el("defs", {});
+  defs.innerHTML = `
+    <radialGradient id="dial" cx="50%" cy="42%" r="60%">
+      <stop offset="0" stop-color="${dialIn}"/><stop offset=".55" stop-color="${dialMid}"/><stop offset="1" stop-color="${dialOut}"/>
+    </radialGradient>
+    <radialGradient id="bezel" cx="50%" cy="38%" r="62%">
+      <stop offset=".78" stop-color="#1d8a48"/><stop offset=".9" stop-color="#0f5c2e"/><stop offset="1" stop-color="#06321a"/>
+    </radialGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f3e4b5"/><stop offset=".5" stop-color="#c9ae6a"/><stop offset="1" stop-color="#f0dca2"/>
+    </linearGradient>
+    <linearGradient id="steel" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f4f6f5"/><stop offset=".5" stop-color="#a9b0ad"/><stop offset="1" stop-color="#e9eceb"/>
+    </linearGradient>
+    <radialGradient id="glare" cx="35%" cy="25%" r="70%">
+      <stop offset="0" stop-color="#fff" stop-opacity=".14"/><stop offset=".5" stop-color="#fff" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="sh" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="2" dy="3" stdDeviation="2" flood-color="#000" flood-opacity=".55"/></filter>`;
+
+  el("rect", { x: 0, y: 0, width: W, height: H, fill: "#000" });
+
+  // Steel case ring
+  el("circle", { cx: CX, cy: CY, r: R_BEZEL_OUT + 4, fill: "url(#steel)" });
+  // Coin-edge knurling on bezel rim
+  const knurl = el("g", { stroke: "#5f6663", "stroke-width": 1.2 });
+  for (let i = 0; i < 120; i++) { const [x1, y1] = pol(R_BEZEL_OUT + 4, i * 3), [x2, y2] = pol(R_BEZEL_OUT, i * 3); el("line", { x1, y1, x2, y2 }, knurl); }
+  // Ceramic bezel
+  el("circle", { cx: CX, cy: CY, r: R_BEZEL_OUT, fill: "url(#bezel)" });
+  el("circle", { cx: CX, cy: CY, r: R_BEZEL_IN, fill: "#000" });
+
+  // Bezel scale (gold-tone)
+  const bz = el("g", { fill: "url(#gold)", stroke: "none" });
+  for (let m = 1; m < 60; m++) {
+    const deg = m * 6;
+    if (m % 10 === 0) {
+      const [x, y] = pol((R_BEZEL_OUT + R_BEZEL_IN) / 2, deg);
+      const t = el("text", { x, y, "text-anchor": "middle", "dominant-baseline": "central",
+        transform: `rotate(${deg} ${x} ${y})`, "font-family": "Inter, Arial, sans-serif", "font-weight": 600, "font-size": 26 }, bz);
+      t.textContent = m;
+    } else if (m % 5 === 0) {
+      const [x, y] = pol(180, deg);
+      el("rect", { x: x - 4, y: y - 13, width: 8, height: 26, rx: 1, transform: `rotate(${deg} ${x} ${y})` }, bz);
+    } else if (m < 15) {
+      const [x, y] = pol(190, deg);
+      el("rect", { x: x - 1.5, y: y - 5.5, width: 3, height: 11, transform: `rotate(${deg} ${x} ${y})` }, bz);
+    }
+  }
+  // Triangle at zero with lume pip
+  const [tx, ty] = pol(180, 0);
+  el("path", { d: `M${tx - 17} ${ty - 14} L${tx + 17} ${ty - 14} L${tx} ${ty + 15} Z`, fill: "url(#gold)" });
+  el("circle", { cx: tx, cy: ty - 5, r: 5.2, fill: "#e9f2e3", stroke: "#8a7a4a", "stroke-width": 1 });
+
+  // Rehaut (inner flange)
+  el("circle", { cx: CX, cy: CY, r: R_BEZEL_IN, fill: "#1a1d1c" });
+  el("circle", { cx: CX, cy: CY, r: R_BEZEL_IN - 1, fill: "none", stroke: "#3c423f", "stroke-width": 1 });
+
+  // Dial with sunburst
+  el("circle", { cx: CX, cy: CY, r: R_DIAL, fill: "url(#dial)" });
+  const sun = el("g", { stroke: "#ffffff", "stroke-opacity": .035, "stroke-width": 1 });
+  for (let i = 0; i < 180; i++) { const [x, y] = pol(R_DIAL, i * 2); el("line", { x1: CX, y1: CY, x2: x, y2: y }, sun); }
+
+  // Minute track
+  const mt = el("g", { stroke: "#f2f4f0", "stroke-linecap": "butt" });
+  for (let m = 0; m < 60; m++) {
+    if (m % 5 === 0) continue;
+    const [x1, y1] = pol(R_DIAL - 2, m * 6), [x2, y2] = pol(R_DIAL - 9, m * 6);
+    el("line", { x1, y1, x2, y2, "stroke-width": 1.6 }, mt);
+  }
+
+  // Hour indices: white-gold surrounds with lume fill
+  const ix = el("g", { filter: "url(#sh)" });
+  const lume = "#eef3e8", rim = "url(#steel)";
+  for (let h = 1; h <= 12; h++) {
+    const deg = h * 30;
+    if (h === 3) continue; // date window
+    if (h === 12) {
+      const [x, y] = pol(R_DIAL - 30, 0);
+      el("path", { d: `M${x - 17} ${y - 17} L${x + 17} ${y - 17} L${x} ${y + 16} Z`, fill: rim }, ix);
+      el("path", { d: `M${x - 13} ${y - 14.5} L${x + 13} ${y - 14.5} L${x} ${y + 11.5} Z`, fill: lume }, ix);
+    } else if (h === 6 || h === 9) {
+      const [x, y] = pol(R_DIAL - 31, deg);
+      el("rect", { x: x - 7.5, y: y - 21, width: 15, height: 42, rx: 1.5, fill: rim, transform: `rotate(${deg} ${x} ${y})` }, ix);
+      el("rect", { x: x - 5.2, y: y - 18.7, width: 10.4, height: 37.4, rx: 1, fill: lume, transform: `rotate(${deg} ${x} ${y})` }, ix);
+    } else {
+      const [x, y] = pol(R_DIAL - 26, deg);
+      el("circle", { cx: x, cy: y, r: 11, fill: rim }, ix);
+      el("circle", { cx: x, cy: y, r: 8.6, fill: lume }, ix);
+    }
+  }
+
+  // Date window at 3 with magnifier
+  const [dx, dy] = pol(R_DIAL - 34, 90);
+  el("rect", { x: dx - 20, y: dy - 15, width: 40, height: 30, rx: 2, fill: rim, filter: "url(#sh)" });
+  el("rect", { x: dx - 18, y: dy - 13, width: 36, height: 26, rx: 1.5, fill: "#fbfbf8" });
+  const date = el("text", { id: "date", x: dx, y: dy + 1, "text-anchor": "middle", "dominant-baseline": "central",
+    "font-family": "Inter, Arial, sans-serif", "font-weight": 600, "font-size": 23, fill: "#111" });
+  date.textContent = new Date().getDate();
+  el("circle", { cx: dx, cy: dy, r: 27, fill: "#ffffff", "fill-opacity": .05, stroke: "#ffffff", "stroke-opacity": .18, "stroke-width": 1.2 });
+
+  // Dial text (original naming)
+  const txt = (s, y, size, weight, family, ls) => {
+    const t = el("text", { x: CX, y, "text-anchor": "middle", fill: "#f4f4ee", "font-size": size, "font-weight": weight,
+      "font-family": family, "letter-spacing": ls || 0 });
+    t.textContent = s; return t;
+  };
+  txt("VERDE", CY - 66, 22, 600, "Cormorant Garamond, Georgia, serif", 3);
+  txt("AUTOMATIC", CY - 46, 8.5, 500, "Inter, Arial, sans-serif", 2.2);
+  txt("300 m / 1000 ft", CY + 58, 9, 500, "Inter, Arial, sans-serif", 1.2);
+  txt("DIVER", CY + 72, 8.5, 500, "Inter, Arial, sans-serif", 2.6);
+
+  // Hands
+  const hg = el("g", { id: "hands", filter: "url(#sh)", style: showHands ? "" : "display:none" });
+  // Hour: broad sword with lume
+  const hour = el("g", { id: "h" }, hg);
+  el("path", { d: `M${CX} ${CY - 92} L${CX + 9} ${CY - 70} L${CX + 6} ${CY + 18} L${CX - 6} ${CY + 18} L${CX - 9} ${CY - 70} Z`, fill: rim }, hour);
+  el("path", { d: `M${CX} ${CY - 86} L${CX + 6} ${CY - 68} L${CX + 3.5} ${CY - 20} L${CX - 3.5} ${CY - 20} L${CX - 6} ${CY - 68} Z`, fill: lume }, hour);
+  // Minute: long sword with lume
+  const minute = el("g", { id: "m" }, hg);
+  el("path", { d: `M${CX} ${CY - 140} L${CX + 7} ${CY - 118} L${CX + 5} ${CY + 22} L${CX - 5} ${CY + 22} L${CX - 7} ${CY - 118} Z`, fill: rim }, minute);
+  el("path", { d: `M${CX} ${CY - 134} L${CX + 4.5} ${CY - 116} L${CX + 2.6} ${CY - 22} L${CX - 2.6} ${CY - 22} L${CX - 4.5} ${CY - 116} Z`, fill: lume }, minute);
+  // Seconds: thin with lume disc and counterweight
+  const sec = el("g", { id: "s" }, hg);
+  el("rect", { x: CX - 1.1, y: CY - 138, width: 2.2, height: 170, fill: rim }, sec);
+  el("circle", { cx: CX, cy: CY - 100, r: 7, fill: rim }, sec);
+  el("circle", { cx: CX, cy: CY - 100, r: 5, fill: lume }, sec);
+  el("rect", { x: CX - 3, y: CY + 22, width: 6, height: 14, rx: 2, fill: rim }, sec);
+  el("circle", { cx: CX, cy: CY, r: 6, fill: rim }, hg);
+  el("circle", { cx: CX, cy: CY, r: 2.2, fill: "#8c938f" }, hg);
+
+  // Crystal glare
+  el("circle", { cx: CX, cy: CY, r: R_BEZEL_OUT, fill: "url(#glare)", "pointer-events": "none" });
+}
+
+const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+function tick() {
+  const n = new Date();
+  const ms = n.getMilliseconds(), s = n.getSeconds() + (reduce ? 0 : ms / 1000);
+  const m = n.getMinutes() + s / 60, h = (n.getHours() % 12) + m / 60;
+  const set = (id, deg) => { const g = document.getElementById(id); if (g) g.setAttribute("transform", `rotate(${deg} ${CX} ${CY})`); };
+  set("h", h * 30); set("m", m * 6); set("s", s * 6);
+  const d = document.getElementById("date"); if (d) d.textContent = n.getDate();
+  reduce ? setTimeout(tick, 1000 - ms) : requestAnimationFrame(tick);
+}
+
+const params = new URLSearchParams(location.search);
+if (params.get("style") === "black") style = "black";
+if (params.get("hands") === "0") showHands = false;
+
+function syncButtons() {
+  document.querySelectorAll("[data-style]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.style === style)));
+  document.getElementById("s-hands").setAttribute("aria-pressed", String(showHands));
+}
+document.querySelectorAll("[data-style]").forEach(b => b.addEventListener("click", () => { style = b.dataset.style; build(); syncButtons(); }));
+document.getElementById("s-hands").addEventListener("click", () => {
+  showHands = !showHands; document.getElementById("hands").style.display = showHands ? "" : "none"; syncButtons();
+});
+
+build(); syncButtons(); tick();
+</script>
