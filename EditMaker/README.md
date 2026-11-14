@@ -1,13 +1,23 @@
-# 에딧 메이커 (macOS · After Effects)
+# 에딧 메이커 (macOS · CapCut / After Effects)
 
-레퍼런스 edit 영상 + 내 클립을 넣으면 **After Effects 프로젝트(.aep)를 자동으로 만들고**, 미리보기 영상을 보면서 **"자막 더 크게" 같은 수정 요청**을 할 수 있는 맥 앱이에요.
+레퍼런스 edit 영상 + 내 클립을 넣으면 **맥용 CapCut 프로젝트** 또는 **After Effects 프로젝트(.aep)** 를 자동으로 만들고, 미리보기를 보면서 **"자막 더 크게" 같은 수정 요청**을 할 수 있는 맥 앱이에요.
+
+## CapCut으로 만들기 (After Effects 없어도 돼요)
+
+1. 맥용 CapCut을 설치하고, 한 번 열어서 아무 프로젝트나 만들었다 닫기
+2. 에딧 메이커 2단계 "스타일"에서 **만들 곳: CapCut** 고르고 만들기
+3. CapCut 홈 화면에 `에딧메이커 … v1` 프로젝트가 생겨요 (안 보이면 CapCut을 ⌘Q로 껐다 켜기)
+
+CapCut 프로젝트에 들어가는 것: 비트에 맞춘 컷, 음악, 자막(폰트·색·테두리·글로우 그림자), 줌 펀치·휩·흔들림·줌인·플래시 움직임(키프레임), 채도·대비·밝기 보정.
+필터·전환 효과·CapCut 텍스트 애니메이션은 CapCut에서 직접 얹어 주세요.
+CapCut 공식 기능이 아니라 프로젝트 파일 형식을 따라 쓰는 방식이라, CapCut 업데이트 후 안 열릴 수 있어요.
 
 ## 실행 방법
 
-1. Mac에 **Xcode 16 이상**과 **Adobe After Effects**(2023 이상 권장)가 있어야 해요.
+1. Mac에 **Xcode 16 이상**이 있어야 해요. 그리고 **CapCut** 또는 **Adobe After Effects**(2023 이상 권장) 중 하나.
 2. `EditMaker/EditMaker.xcodeproj` 를 열고 ▶︎ (⌘R).
    - 서명 오류가 나면 Signing & Capabilities → Team 에 본인 Apple ID를 고르세요.
-3. **After Effects에서 한 번만**: 설정 › 스크립팅 및 표현식 › **"스크립트가 파일을 쓰고 네트워크에 액세스하도록 허용"** 켜기
+3. (After Effects를 쓸 때만) **After Effects에서 한 번만**: 설정 › 스크립팅 및 표현식 › **"스크립트가 파일을 쓰고 네트워크에 액세스하도록 허용"** 켜기
 4. 처음 만들 때 "에딧 메이커가 After Effects를 제어하려고 합니다" → **허용**
 
 ## 쓰는 순서

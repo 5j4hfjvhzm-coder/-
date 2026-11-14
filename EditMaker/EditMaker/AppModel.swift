@@ -3,6 +3,12 @@ import AVFoundation
 import Foundation
 import SwiftUI
 
+enum OutputTarget: String, CaseIterable, Identifiable {
+    case capcut, afterEffects
+    var id: String { rawValue }
+    var name: String { self == .capcut ? "CapCut" : "After Effects" }
+}
+
 enum Step: Int, CaseIterable, Identifiable {
     case materials, style, build, review
     var id: Int { rawValue }
@@ -18,7 +24,7 @@ enum Step: Int, CaseIterable, Identifiable {
         switch self {
         case .materials: return "레퍼런스와 클립"
         case .style: return "자막 · CC · 효과"
-        case .build: return "After Effects 작업"
+        case .build: return "프로젝트 만들기"
         case .review: return "보고 고쳐 달라고 하기"
         }
     }
@@ -74,6 +80,10 @@ final class AppModel: ObservableObject {
     // 설정
     @Published var aeApps: [AEApp] = []
     @AppStorage("selectedAE") var selectedAEPath = ""
+    /// 결과물을 어디로 만들지 (캡컷 / After Effects)
+    @Published var output: OutputTarget = OutputTarget(rawValue: UserDefaults.standard.string(forKey: "outputTarget") ?? "") ?? .capcut {
+        didSet { UserDefaults.standard.set(output.rawValue, forKey: "outputTarget") }
+    }
 
     private var seed: UInt64 = 7
     private var workDir: URL?
@@ -81,6 +91,9 @@ final class AppModel: ObservableObject {
     init() {
         aeApps = AERunner.installed()
         FontInstaller.registerDownloaded()
+        if UserDefaults.standard.string(forKey: "outputTarget") == nil && !aeApps.isEmpty && !CapCutDraft.isAvailable {
+            output = .afterEffects
+        }
     }
 
     var selectedAE: AEApp? {
@@ -181,8 +194,52 @@ final class AppModel: ObservableObject {
         }
     }
 
-    /// 설계도 → JSX → AE 실행 → (미리보기 렌더) → 새 버전
     func build(_ plan: EditPlan, note: String) async {
+        switch output {
+        case .capcut: await buildCapCut(plan, note: note)
+        case .afterEffects: await buildAE(plan, note: note)
+        }
+    }
+
+    /// 설계도 → CapCut 프로젝트 + 앱 안 미리보기
+    func buildCapCut(_ plan: EditPlan, note: String) async {
+        isBusy = true
+        errorMessage = nil
+        progress = nil
+        defer { isBusy = false; progress = nil }
+        do {
+            if !FontInstaller.missing.isEmpty {
+                status = "자막 폰트 준비 중…"
+                let n = try await FontInstaller.installMissing { msg in Task { @MainActor in self.status = msg } }
+                if n > 0 { addLog("폰트 \(n)개 설치 완료") }
+            }
+            let dir = try ensureWorkDir()
+            let number = (versions.map(\.number).max() ?? 0) + 1
+            try Data(Director.encode(plan).utf8).write(to: dir.appendingPathComponent("edit_v\(number).plan.json"))
+
+            status = "CapCut 프로젝트 v\(number) 만드는 중…"
+            var musicDur: Double? = nil
+            if let m = plan.music {
+                musicDur = try? await AVURLAsset(url: URL(fileURLWithPath: m.path)).load(.duration).seconds
+            }
+            let name = "에딧메이커 \(dir.lastPathComponent.replacingOccurrences(of: "edit-", with: "")) v\(number)"
+            let folder = try CapCutDraft.write(plan: plan, name: name, clips: clips, musicDuration: musicDur)
+            addLog("CapCut 프로젝트 저장: \(name)")
+
+            let v = EditVersion(number: number, plan: plan, note: note, projectURL: folder, renderURL: nil)
+            versions.append(v)
+            currentVersionID = v.id
+            draft = plan
+            status = "v\(number) 완성! CapCut 홈 화면에 '\(name)' 프로젝트가 생겼어요."
+            step = .review
+            NSApp.requestUserAttention(.informationalRequest)
+        } catch {
+            show(error)
+        }
+    }
+
+    /// 설계도 → JSX → AE 실행 → (미리보기 렌더) → 새 버전
+    func buildAE(_ plan: EditPlan, note: String) async {
         guard let ae = selectedAE else { show(AEError.notInstalled); return }
         isBusy = true
         errorMessage = nil
@@ -303,7 +360,18 @@ final class AppModel: ObservableObject {
 
     func openInAE(_ v: EditVersion) {
         guard let p = v.projectURL else { return }
-        AERunner.open(project: p, with: selectedAE)
+        if p.pathExtension == "aep" {
+            AERunner.open(project: p, with: selectedAE)
+        } else {
+            CapCutDraft.openCapCut()
+        }
+    }
+
+    var canBuildHere: Bool {
+        switch output {
+        case .capcut: return CapCutDraft.isAvailable
+        case .afterEffects: return selectedAE != nil
+        }
     }
 
     func reveal(_ v: EditVersion) {

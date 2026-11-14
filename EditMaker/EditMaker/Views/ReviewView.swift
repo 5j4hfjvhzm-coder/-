@@ -1,4 +1,5 @@
 import AVKit
+import AppKit
 import SwiftUI
 
 /// 영상 검토 + 수정 요청 화면
@@ -31,10 +32,9 @@ struct ReviewView: View {
             ChatPanel()
                 .frame(width: 340)
         }
-        .onAppear { player.load(model.currentVersion?.renderURL) }
-        .onChange(of: model.currentVersionID) { _, _ in
-            player.load(model.currentVersion?.renderURL)
+        .task(id: model.currentVersionID) {
             selection = nil
+            await player.load(model.currentVersion)
         }
     }
 
@@ -63,7 +63,8 @@ struct ReviewView: View {
             }
             Spacer()
             if let v = model.currentVersion {
-                Button { model.openInAE(v) } label: { Label("AE에서 열기", systemImage: "arrow.up.forward.app") }
+                let isAE = v.projectURL?.pathExtension == "aep"
+                Button { model.openInAE(v) } label: { Label(isAE ? "AE에서 열기" : "CapCut 열기", systemImage: "arrow.up.forward.app") }
                     .buttonStyle(GhostButtonStyle())
                 Button { model.reveal(v) } label: { Label("Finder", systemImage: "folder") }
                     .buttonStyle(GhostButtonStyle())
@@ -81,16 +82,16 @@ struct ReviewView: View {
         let plan = model.draft
         let ratio = plan.map { CGFloat($0.width) / CGFloat($0.height) } ?? (9 / 16)
         return ZStack {
-            if model.currentVersion?.renderURL != nil {
-                VideoPlayer(player: player.player)
-            } else {
-                VStack(spacing: 12) {
-                    Image(systemName: "film.stack").font(.system(size: 40)).foregroundStyle(Theme.neon)
-                    Text("미리보기 렌더를 끈 상태예요").font(.system(size: 13, weight: .bold))
-                    Text("After Effects에서 열어서 확인하세요").font(.system(size: 11.5)).foregroundStyle(Theme.dim)
-                    if let v = model.currentVersion {
-                        Button("AE에서 열기") { model.openInAE(v) }.buttonStyle(NeonButtonStyle())
-                    }
+            VideoPlayer(player: player.player)
+            if model.currentVersion?.renderURL == nil, let plan {
+                SubtitleOverlay(plan: plan, time: player.time)
+                    .allowsHitTesting(false)
+            }
+            if model.currentVersion?.renderURL == nil {
+                VStack {
+                    Chip(text: "간단 미리보기 · 효과·색보정은 \(model.output.name)에서 확인", symbol: "eye", tint: .white)
+                        .padding(10)
+                    Spacer()
                 }
             }
             if model.isBusy {
@@ -124,9 +125,13 @@ final class PlayerBox: ObservableObject {
         }
     }
 
-    func load(_ url: URL?) {
-        guard let url else { player.replaceCurrentItem(with: nil); return }
-        player.replaceCurrentItem(with: AVPlayerItem(url: url))
+    func load(_ v: EditVersion?) async {
+        guard let v else { player.replaceCurrentItem(with: nil); return }
+        if let url = v.renderURL {
+            player.replaceCurrentItem(with: AVPlayerItem(url: url))
+        } else {
+            player.replaceCurrentItem(with: await PreviewBuilder.make(plan: v.plan))
+        }
         player.play()
     }
 
@@ -472,6 +477,23 @@ struct Bubble: View {
         case .user: return AnyShapeStyle(Theme.neon.opacity(0.85))
         case .assistant: return AnyShapeStyle(Color.white.opacity(0.09))
         case .system: return AnyShapeStyle(Color.orange.opacity(0.12))
+        }
+    }
+}
+
+/// 간단 미리보기 위에 자막을 그려요.
+struct SubtitleOverlay: View {
+    var plan: EditPlan
+    var time: Double
+
+    var body: some View {
+        GeometryReader { geo in
+            let k = geo.size.width / CGFloat(max(plan.width, 1))
+            ForEach(plan.subtitles.filter { time >= $0.start && time < $0.end }) { sub in
+                StylePreview(style: sub.style, text: sub.text, accent: Theme.hex(sub.accent), size: max(CGFloat(sub.size) * k, 8))
+                    .multilineTextAlignment(.center)
+                    .position(x: geo.size.width * sub.x, y: geo.size.height * sub.y)
+            }
         }
     }
 }

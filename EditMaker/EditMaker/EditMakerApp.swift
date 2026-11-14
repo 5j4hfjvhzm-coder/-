@@ -75,7 +75,7 @@ struct Sidebar: View {
                         .font(.system(size: 17, weight: .black, design: .rounded))
                         .tracking(1.5)
                         .foregroundStyle(Theme.neon)
-                    Text("for After Effects").font(.system(size: 10, weight: .medium)).foregroundStyle(Theme.dim)
+                    Text("for CapCut · After Effects").font(.system(size: 10, weight: .medium)).foregroundStyle(Theme.dim)
                 }
             }
             .padding(.top, 38)
@@ -94,7 +94,11 @@ struct Sidebar: View {
             Spacer()
 
             VStack(alignment: .leading, spacing: 8) {
-                if let ae = model.selectedAE {
+                if model.output == .capcut {
+                    Chip(text: CapCutDraft.isAvailable ? "CapCut 연결됨" : "CapCut 폴더 없음",
+                         symbol: CapCutDraft.isAvailable ? "checkmark.seal.fill" : "exclamationmark.triangle.fill",
+                         tint: CapCutDraft.isAvailable ? Theme.cyan : .orange)
+                } else if let ae = model.selectedAE {
                     Chip(text: ae.name.replacingOccurrences(of: "Adobe ", with: ""), symbol: "checkmark.seal.fill", tint: Theme.cyan)
                 } else {
                     Chip(text: "After Effects 없음", symbol: "exclamationmark.triangle.fill", tint: .orange)

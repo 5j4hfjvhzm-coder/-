@@ -1,3 +1,4 @@
+import AppKit
 import SwiftUI
 
 struct SettingsView: View {
@@ -12,11 +13,49 @@ struct SettingsView: View {
 
     var body: some View {
         TabView {
+            capcutTab.tabItem { Label("CapCut", systemImage: "scissors") }
             aeTab.tabItem { Label("After Effects", systemImage: "film") }
             aiTab.tabItem { Label("AI", systemImage: "sparkles") }
             fontTab.tabItem { Label("폰트", systemImage: "textformat") }
         }
         .frame(width: 560, height: 430)
+    }
+
+    private var capcutTab: some View {
+        Form {
+            Section("CapCut 프로젝트 폴더") {
+                Text(CapCutDraft.root.path).font(.system(size: 11, design: .monospaced)).textSelection(.enabled)
+                HStack {
+                    Image(systemName: CapCutDraft.isAvailable ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
+                        .foregroundStyle(CapCutDraft.isAvailable ? Color.green : Color.orange)
+                    Text(CapCutDraft.isAvailable ? "찾았어요" : "폴더가 없어요")
+                    Spacer()
+                    Button("폴더 고르기") {
+                        let p = NSOpenPanel()
+                        p.canChooseDirectories = true
+                        p.canChooseFiles = false
+                        p.directoryURL = CapCutDraft.defaultRoot.deletingLastPathComponent()
+                        if p.runModal() == .OK, let u = p.url {
+                            UserDefaults.standard.set(u.path, forKey: "capcutRoot")
+                            model.objectWillChange.send()
+                        }
+                    }
+                    Button("기본값") {
+                        UserDefaults.standard.removeObject(forKey: "capcutRoot")
+                        model.objectWillChange.send()
+                    }
+                }
+            }
+            Section("처음 한 번만 해 주세요") {
+                Text("1. 맥용 CapCut을 설치하고, 한 번 열어서 아무 프로젝트나 하나 만들었다가 닫기 (프로젝트 폴더가 생기고, 앱이 설치된 CapCut 버전을 알아내는 데 써요)")
+                Text("2. 에딧 메이커로 만든 뒤 CapCut 홈 화면에 프로젝트가 안 보이면 CapCut을 완전히 껐다(⌘Q) 다시 켜기")
+                Text("3. 클립 파일은 다운로드·동영상·문서 폴더처럼 고정된 곳에 두기 (지우거나 옮기면 CapCut이 파일을 다시 찾으라고 해요)")
+                Text("※ CapCut 공식 기능이 아니라서, CapCut 업데이트 후 프로젝트가 안 열리면 알려 주세요.")
+                    .foregroundStyle(.secondary)
+            }
+            .font(.system(size: 12))
+        }
+        .formStyle(.grouped)
     }
 
     private var aeTab: some View {

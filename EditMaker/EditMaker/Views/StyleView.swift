@@ -18,8 +18,9 @@ struct StyleView: View {
 
                 HStack(spacing: 14) {
                     Spacer()
-                    if model.selectedAE == nil {
-                        Chip(text: "After Effects를 찾지 못했어요 · 설정에서 확인", symbol: "exclamationmark.triangle.fill", tint: .orange)
+                    if !model.canBuildHere {
+                        Chip(text: model.output == .capcut ? "CapCut 프로젝트 폴더를 못 찾았어요 · 설정에서 확인" : "After Effects를 찾지 못했어요 · 설정에서 확인",
+                             symbol: "exclamationmark.triangle.fill", tint: .orange)
                     }
                     Button {
                         model.generate()
@@ -27,7 +28,7 @@ struct StyleView: View {
                         Label("Edit 만들기", systemImage: "sparkles")
                     }
                     .buttonStyle(NeonButtonStyle(big: true))
-                    .disabled(!model.canGenerate || model.selectedAE == nil)
+                    .disabled(!model.canGenerate || !model.canBuildHere)
                     .keyboardShortcut(.return, modifiers: .command)
                 }
             }
@@ -68,6 +69,14 @@ struct StyleView: View {
         GlassCard {
             VStack(alignment: .leading, spacing: 14) {
                 SectionHeader(title: "편집", symbol: "timeline.selection")
+                Picker("만들 곳", selection: $model.output) {
+                    ForEach(OutputTarget.allCases) { Text($0.name).tag($0) }
+                }
+                .pickerStyle(.segmented)
+                Text(model.output == .capcut
+                     ? "CapCut 홈 화면에 프로젝트가 생겨요. 컷·음악·자막·줌 움직임이 깔려 있고, 필터·전환 효과는 CapCut에서 더 얹으면 돼요."
+                     : "After Effects 프로젝트(.aep)를 만들고 미리보기 영상까지 렌더해요.")
+                    .font(.system(size: 10.5)).foregroundStyle(Theme.dim)
                 Picker("화면 비율", selection: $model.aspect) {
                     ForEach(AspectOption.allCases) { Text($0.name).tag($0) }
                 }
@@ -94,10 +103,12 @@ struct StyleView: View {
                     }
                 }
                 .disabled(!model.hasAIKey)
-                Toggle(isOn: $model.renderPreview) {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("미리보기 영상 렌더")
-                        Text("끄면 AE 프로젝트만 만들어요 (빠름)").font(.system(size: 10.5)).foregroundStyle(Theme.dim)
+                if model.output == .afterEffects {
+                    Toggle(isOn: $model.renderPreview) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("미리보기 영상 렌더")
+                            Text("끄면 AE 프로젝트만 만들어요 (빠름)").font(.system(size: 10.5)).foregroundStyle(Theme.dim)
+                        }
                     }
                 }
             }

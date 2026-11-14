@@ -15,7 +15,7 @@ enum Director {
         let ccs = Catalog.ccPresets.map { "- \($0.id): \($0.name) — \($0.detail)" }.joined(separator: "\n")
         let fonts = Catalog.fonts.map { "- \($0.id) (\($0.name))" }.joined(separator: "\n")
         return """
-        너는 틱톡/릴스 K-pop 팬 "edit" 영상 전문 편집 감독이야. After Effects로 만들어질 edit의 설계도(JSON)를 다룬다.
+        너는 틱톡/릴스 K-pop 팬 "edit" 영상 전문 편집 감독이야. CapCut 또는 After Effects로 만들어질 edit의 설계도(JSON)를 다룬다.
         edit 특유의 느낌: 비트에 딱딱 맞는 빠른 컷, 줌 펀치·플래시·흔들림, 몽환적인 글로우 색보정(cc), 네온/번지는 자막.
 
         설계도 필드:
