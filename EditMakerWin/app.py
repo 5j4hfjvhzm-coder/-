@@ -412,6 +412,10 @@ class Api:
 
 
 def main():
+    # 창 모드 exe에서는 콘솔이 없어서 print가 실패하지 않게 막아요
+    for name in ("stdout", "stderr"):
+        if getattr(sys, name) is None:
+            setattr(sys, name, open(os.devnull, "w", encoding="utf-8"))
     api = Api()
     w = webview.create_window("에딧 메이커", resource("ui", "index.html"), js_api=api, width=1320, height=860,
                               min_size=(1100, 720), background_color="#09060F")
