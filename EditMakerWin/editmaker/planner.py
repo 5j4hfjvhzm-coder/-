@@ -3,7 +3,7 @@ import colorsys
 import os
 import random
 
-from . import catalog
+from . import catalog, scenes
 
 
 def r3(v):
@@ -62,6 +62,8 @@ def cut_points(ref, duration, mode):
             out.append(p)
     if duration - out[-1] < 0.25 and len(out) > 1:
         out.pop()
+    # 컷은 비트보다 1프레임 먼저 넘어가야 더 찰져요
+    out = [out[0]] + [round(max(x - 1 / 30, 0.1), 3) for x in out[1:]]
     out.append(duration)
     return out
 
@@ -179,7 +181,8 @@ def make(ref, ref_path, music_path, clips, o):
             trans = rng.choice(["whip", "zoom_punch", "blur_in"])
         push = (0.04 + 0.08 * rng.random()) * (0.5 + effect) if length > 0.8 else 0
         segments.append({"id": i + 1, "clip": clip["path"], "clipIn": r3(clip_in), "start": r3(start), "end": r3(end),
-                         "speed": r3(speed), "transition": trans, "shake": shake, "push": r3(push)})
+                         "speed": r3(speed), "transition": trans, "shake": shake, "push": r3(push),
+                         "effects": [], "note": ""})
 
     lines = [l.strip() for l in o.get("subtitleLines", []) if l.strip()]
     subtitles = []
@@ -243,12 +246,15 @@ def sanitize(plan, clips):
         s["shake"] = bool(s.get("shake", False))
         if s.get("transition") not in catalog.TRANSITION_IDS:
             s["transition"] = "none"
+        s["effects"] = scenes.clean_effects(s.get("effects"))
+        s["note"] = str(s.get("note") or "")[:200]
         c = by_path.get(s["clip"])
         if c and not c["isStill"]:
             length = s["end"] - s["start"]
-            if length * s["speed"] > c["duration"]:
-                s["speed"] = max(0.1, c["duration"] / length * 0.98)
-            need = length * s["speed"]
+            k = scenes.source_factor(s["effects"])
+            if length * s["speed"] * k > c["duration"]:
+                s["speed"] = max(0.1, c["duration"] / (length * k) * 0.98)
+            need = length * s["speed"] * k
             if s["clipIn"] + need > c["duration"]:
                 s["clipIn"] = max(0.0, c["duration"] - need - 0.01)
         segs.append(s)

@@ -13,7 +13,7 @@ from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 
 import webview
 
-from editmaker import ae, capcut, catalog, config, director, fonts, media, planner, preview
+from editmaker import ae, capcut, catalog, config, director, fonts, media, planner, preview, scenes
 
 
 def resource(*parts):
@@ -128,6 +128,7 @@ class Api:
             "hasClaude": bool(config.get_key("claude")), "hasGemini": bool(config.get_key("gemini")),
             "fontsMissing": [f["name"] for f in fonts.missing()],
             "styles": catalog.STYLES, "transitions": catalog.TRANSITIONS, "ccPresets": catalog.CC_PRESETS,
+            "sceneFx": scenes.FX,
             "fonts": [{"id": f["id"], "name": f["name"]} for f in catalog.FONTS],
             "workRoot": self._root,
         }
@@ -272,6 +273,11 @@ class Api:
         with open(base + ".plan.json", "w", encoding="utf-8") as f:
             json.dump(plan, f, ensure_ascii=False, indent=1)
 
+        # 장면 효과(리버스·정지 화면·벨로시티 등)를 실제 재생 조각으로 펼쳐요
+        if any(s.get("effects") for s in plan["segments"]):
+            self._status("장면 효과 준비 중… (리버스·정지 화면 파일 만들기)")
+        pieces, _extra = scenes.expand(plan, self._clips, os.path.join(d, "assets"))
+
         if out == "ae":
             apps = ae.installed()
             app = next((a for a in apps if a["name"] == config.get("aeApp")), apps[0] if apps else None)
@@ -279,7 +285,7 @@ class Api:
                 raise RuntimeError("After Effects를 찾지 못했어요. 설정에서 'CapCut'으로 바꾸거나 AE를 설치해 주세요.")
             self._status(f"After Effects에서 v{number} 만드는 중… (AE 창이 움직여도 놀라지 마세요)")
             with open(base + ".jsx", "w", encoding="utf-8") as f:
-                f.write(ae.build_jsx(plan, base + ".aep", base, base + ".done.json"))
+                f.write(ae.build_jsx(dict(plan, segments=pieces), base + ".aep", base, base + ".done.json"))
             r = ae.run_script(app, base + ".jsx", base + ".done.json")
             for w in r.get("warnings", []):
                 self._log("⚠️ " + w)
@@ -288,13 +294,13 @@ class Api:
         else:
             self._status(f"CapCut 프로젝트 v{number} 만드는 중…")
             name = f"에딧메이커 {os.path.basename(d).replace('edit-', '')} v{number}"
-            project, kind = capcut.write(plan, name, self._clips), "capcut"
+            project, kind = capcut.write(plan, name, pieces), "capcut"
             self._log("CapCut 프로젝트 저장: " + name)
 
         self._status("미리보기 영상 만드는 중… (1분 정도 걸릴 수 있어요)")
         prev = base + ".preview.mp4"
         try:
-            preview.render(plan, self._clips, prev)
+            preview.render(plan, pieces, prev)
         except Exception as e:
             self._log("⚠️ 미리보기를 못 만들었어요: " + str(e)[:300])
             prev = None
@@ -302,6 +308,9 @@ class Api:
                               "preview": prev})
         self._current = number
         self._busy = False
+        todo = scenes.todo_list(plan)
+        if todo:
+            self._chat.append({"role": "assistant", "text": "📝 CapCut에서 직접 넣어 주세요:\n" + "\n".join("• " + t for t in todo)})
         where = "CapCut 홈 화면에 프로젝트가 생겼어요" if kind == "capcut" else "AE 프로젝트를 저장했어요"
         self._status(f"v{number} 완성! {where}. 보고 고칠 부분을 말해 주세요.")
         self._emit("snapshot", data=self.snapshot())
@@ -317,8 +326,24 @@ class Api:
         if not base:
             return False
         self._chat.append({"role": "user", "text": text})
+        # 1) "3번 장면 리버스" 같은 장면 요청은 AI 없이 바로 반영
+        new_plan, msg = scenes.apply_request(base, text)
+        if new_plan is not None:
+            new_plan = planner.sanitize(new_plan, self._clips)
+            self._chat.append({"role": "assistant", "text": "✅ " + msg})
+            if auto:
+                self._busy = True
+                self._emit("snapshot", data=self.snapshot())
+                self._bg(self._build, new_plan, text)
+            else:
+                self._emit("snapshot", data=self.snapshot())
+                self._emit("draft", plan=new_plan)
+            return True
+        # 2) 그 밖의 요청은 AI가 처리
         if not director.current_client():
-            self._chat.append({"role": "system", "text": "AI 키가 없어서 말로 고칠 수 없어요. 설정에서 키를 넣거나, 타임라인에서 직접 고쳐 주세요."})
+            hint = msg or ("이해한 장면 요청이 없어요. 예) \"3번 장면 리버스\", \"5~7번 흑백\", \"10초에 플래시\", "
+                           "\"마지막 장면 정지 화면\". 자유로운 문장은 설정에서 AI 키를 넣으면 돼요.")
+            self._chat.append({"role": "system", "text": hint})
             self._emit("snapshot", data=self.snapshot())
             return False
         self._busy = True

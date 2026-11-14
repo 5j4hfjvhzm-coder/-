@@ -6,7 +6,7 @@ import sys
 import tempfile
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from editmaker import ae, capcut, config, fonts, media, planner, preview  # noqa: E402
+from editmaker import ae, capcut, config, fonts, media, planner, preview, scenes  # noqa: E402
 
 tmp = tempfile.mkdtemp(prefix="em smoke ")  # 공백 들어간 경로도 확인
 ff = media.ffmpeg_exe()
@@ -35,8 +35,19 @@ o = dict(aspect="vertical", cutMode="mix", maxLength=0, ccPreset="auto", subtitl
 plan = planner.sanitize(planner.make(a, ref, None, clips, o), clips)
 print(len(plan["segments"]), "segments,", len(plan["subtitles"]), "subtitles")
 
+# 장면 요청: "1번 메모리, 2번 리버스 ..." → 효과 펼치기
+n = len(plan["segments"])
+req = "1번 장면 메모리, 2번 리버스, 3번 정지 화면, 4번 벨로시티, 5번 흑백에서 컬러로, 마지막 장면 글리치 그리고 깜빡임"
+new_plan, msg = scenes.apply_request(plan, req)
+print(msg)
+assert new_plan is not None
+plan = planner.sanitize(new_plan, clips)
+pieces, extra = scenes.expand(plan, clips, os.path.join(tmp, "assets"))
+print(len(pieces), "pieces,", len(extra), "helper files")
+assert len(pieces) > n
+
 out = os.path.join(tmp, "preview.mp4")
-preview.render(plan, clips, out)
+preview.render(plan, pieces, out)
 info = media.probe(out)
 print("preview:", info)
 assert info["duration"] > 7 and info["hasAudio"]
@@ -44,13 +55,13 @@ assert info["duration"] > 7 and info["hasAudio"]
 root = os.path.join(tmp, "capcut drafts")
 os.makedirs(root)
 config.set("capcutRoot", root)
-folder = capcut.write(plan, "에딧메이커 smoke v1", clips)
+folder = capcut.write(plan, "에딧메이커 smoke v1", pieces)
 with open(os.path.join(folder, "draft_content.json"), encoding="utf-8") as f:
     d = json.load(f)
 print("capcut tracks:", [t["type"] for t in d["tracks"]], "files:", sorted(os.listdir(folder)))
 config.set("capcutRoot", None)
 
-jsx = ae.build_jsx(plan, os.path.join(tmp, "a.aep"), os.path.join(tmp, "a"), os.path.join(tmp, "d.json"))
+jsx = ae.build_jsx(dict(plan, segments=pieces), os.path.join(tmp, "a.aep"), os.path.join(tmp, "a"), os.path.join(tmp, "d.json"))
 assert "__PLAN__" not in jsx and all(ord(c) < 128 for c in jsx)
 print("AE apps:", ae.installed())
 print("SMOKE OK")

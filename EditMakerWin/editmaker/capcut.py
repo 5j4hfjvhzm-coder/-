@@ -127,6 +127,8 @@ CC_ADJUST = {  # 채도, 대비, 밝기 (-1~1)
 
 
 def motion_keyframes(seg, base, cc):
+    """seg = scenes.expand() 조각. 움직임 + 색(장면 효과 포함)을 키프레임으로"""
+    fx = seg.get("fx") or {}
     length = seg["end"] - seg["start"]
     t_in = min(0.25, length * 0.5)
     end_scale = base * (1 + seg["push"])
@@ -143,10 +145,17 @@ def motion_keyframes(seg, base, cc):
     elif tr == "blur_in":
         alpha = [(0, 0.2), (t_in, 1)]
     elif tr == "flash":
-        bright = [(0, 1), (min(0.16, length * 0.5), 0)]
+        bright = [(0, 1), (min(0.08, length * 0.5), 0)]  # 플래시는 2~3프레임
+    if fx.get("zoom_out"):
+        scale = [(0, base * 1.25), (length * 0.7, base * 1.03), (length, base)]
+    elif fx.get("freeze"):
+        scale = [(0, base), (length, base * 1.06)]
     if not scale and seg["push"] > 0:
         scale = [(0, base), (length, end_scale)]
     if seg["shake"]:
+        # 흔들릴 때 가장자리 빈 공간이 안 보이게 먼저 살짝 키워요
+        if not scale:
+            scale = [(0, base * 1.08), (min(length, 0.5), base * 1.08), (length, base * (1 + seg["push"]))]
         end = min(length, 0.5)
         xs, ys, t, i = [], [], 0.0, 0
         while t < end:
@@ -161,12 +170,31 @@ def motion_keyframes(seg, base, cc):
         pos_y = ys
     sat, con, bri = CC_ADJUST.get(cc["preset"], CC_ADJUST["dreamy_glow"])
     k = cc["intensity"]
+    sat_keys = [(0, sat * k)]
+    con_keys = [(0, con * k)]
+    if fx.get("bw"):
+        sat_keys = [(0, -1.0)]
+    elif fx.get("memory"):
+        sat_keys, con_keys = [(0, -0.6)], [(0, -0.15)]
+        bri = bri + 0.08
+        alpha = alpha or [(0, 0.3), (min(0.3, length * 0.5), 1)]
+    elif fx.get("bwc"):
+        p0, p1 = fx["bwc"]
+        lerp = lambda p: -1.0 + (sat * k + 1.0) * p
+        sat_keys = [(0, lerp(p0)), (length, lerp(p1))]
+    if fx.get("strobe"):
+        bright, t, on = [], 0.0, True
+        while t < length:
+            bright += [(t, 0.55 if on else 0.0), (min(t + 0.099, length), 0.55 if on else 0.0)]
+            t += 0.1
+            on = not on
+    bright_keys = [(t, v + bri * k) for t, v in bright] if bright else [(0, bri * k)]
     lists = [
         _kf_list("KFTypeScaleX", scale, length), _kf_list("KFTypeScaleY", scale, length),
         _kf_list("KFTypePositionX", pos_x, length), _kf_list("KFTypePositionY", pos_y, length),
         _kf_list("KFTypeRotation", rot, length), _kf_list("KFTypeAlpha", alpha, length),
-        _kf_list("KFTypeSaturation", [(0, sat * k)], length), _kf_list("KFTypeContrast", [(0, con * k)], length),
-        _kf_list("KFTypeBrightness", [(t, v + bri * k) for t, v in bright] if bright else [(0, bri * k)], length),
+        _kf_list("KFTypeSaturation", sat_keys, length), _kf_list("KFTypeContrast", con_keys, length),
+        _kf_list("KFTypeBrightness", bright_keys, length),
     ]
     return [l for l in lists if l]
 
@@ -341,7 +369,8 @@ def track(kind, segments):
     return {"attribute": 0, "flag": 0, "id": nid(), "is_default_name": True, "name": "", "segments": segments, "type": kind}
 
 
-def write(plan, name, clips):
+def write(plan, name, pieces):
+    """pieces = scenes.expand() 조각들 (각 조각에 파일 정보가 들어 있어요)"""
     r = root()
     if not os.path.isdir(r):
         raise RuntimeError(f"CapCut 프로젝트 폴더를 찾지 못했어요 ({r}). CapCut을 한 번 열어 아무 프로젝트나 만든 뒤 "
@@ -353,12 +382,14 @@ def write(plan, name, clips):
     materials = {k: [] for k in MATERIAL_CATEGORIES}
     add = lambda cat, m: materials.setdefault(cat, []).append(m)
 
-    by_path = {c["path"]: c for c in clips}
+    by_path = {}
+    for pc in pieces:
+        by_path.setdefault(pc["clip"], {"path": pc["clip"], "name": pc["name"], "duration": pc["duration"],
+                                        "width": pc["width"], "height": pc["height"], "isStill": pc["isStill"],
+                                        "hasAudio": pc.get("hasAudio", False)})
     mids, media_entries = {}, []
-    for path in sorted({s["clip"] for s in plan["segments"]}):
-        c = by_path.get(path)
-        if not c:
-            continue
+    for path in sorted(by_path):
+        c = by_path[path]
         mids[path] = nid()
         add("videos", video_material(mids[path], c))
         media_entries.append((path, c["name"], 10800 if c["isStill"] else c["duration"], c["width"], c["height"],
@@ -366,10 +397,8 @@ def write(plan, name, clips):
 
     W, H = float(plan["width"]), float(plan["height"])
     vsegs = []
-    for seg in plan["segments"]:
-        c = by_path.get(seg["clip"])
-        if not c or seg["clip"] not in mids:
-            continue
+    for seg in pieces:
+        c = by_path[seg["clip"]]
         speed = 1.0 if c["isStill"] else seg["speed"]
         length = seg["end"] - seg["start"]
         cw, ch = max(c["width"], 1), max(c["height"], 1)

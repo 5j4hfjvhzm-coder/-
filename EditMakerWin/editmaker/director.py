@@ -4,7 +4,7 @@ import json
 import urllib.error
 import urllib.request
 
-from . import catalog, config, media, planner
+from . import catalog, config, media, planner, scenes
 
 CLAUDE_MODEL = "claude-opus-5-5"
 GEMINI_MODEL = "gemini-flash-latest"
@@ -81,6 +81,7 @@ def system_prompt():
     trans = "\n".join(f"- {t['id']}: {t['name']} — {t['detail']}" for t in catalog.TRANSITIONS)
     ccs = "\n".join(f"- {c['id']}: {c['name']} — {c['detail']}" for c in catalog.CC_PRESETS)
     fonts = "\n".join(f"- {f['id']} ({f['name']})" for f in catalog.FONTS)
+    fx = "\n".join(f"- {f['id']}: {f['name']} — {f['detail']}" for f in scenes.FX)
     return f"""너는 틱톡/릴스 "edit" 영상 전문 편집 감독이야. CapCut 또는 After Effects로 만들어질 edit의 설계도(JSON)를 다룬다.
 edit 특유의 느낌: 비트에 딱딱 맞는 빠른 컷, 줌 펀치·플래시·흔들림·휩, 몽환적인 글로우 색보정(cc), 네온/번지는 자막.
 
@@ -88,7 +89,8 @@ edit 특유의 느낌: 비트에 딱딱 맞는 빠른 컷, 줌 펀치·플래시
 - width, height, fps, duration(초)
 - music: {{path, offset}} — 바꾸지 마.
 - cc: {{preset, intensity 0~1, bloom 0~1(살짝 번지는 글로우), grain 0~1, vignette 0~1, userPresets[] — 바꾸지 마}}
-- segments[]: {{id, clip(파일 경로, 주어진 클립 목록 안에서만), clipIn(클립의 몇 초부터), start, end, speed(1=원래, 0.5=슬로우), transition, shake(bool), push(0~0.3 천천히 줌인)}}
+- segments[]: {{id, clip(파일 경로, 주어진 클립 목록 안에서만), clipIn(클립의 몇 초부터), start, end, speed(1=원래, 0.5=슬로우), transition, shake(bool), push(0~0.3 천천히 줌인), effects[](장면 효과 id 목록), note(메모)}}
+  · id는 사용자가 말하는 "N번 장면" 번호야. 사용자가 장면 번호나 초를 말하면 그 장면만 정확히 고쳐.
   · segments는 0초부터 duration까지 빈틈없이, 겹치지 않게 이어져야 해.
   · clipIn + (end-start)*speed 가 그 클립 길이를 넘으면 안 돼.
   · 컷 경계는 가능하면 beats 목록의 시각에 맞춰.
@@ -100,6 +102,9 @@ edit 특유의 느낌: 비트에 딱딱 맞는 빠른 컷, 줌 펀치·플래시
 
 transition:
 {trans}
+
+장면 효과(effects):
+{fx}
 
 cc preset:
 {ccs}

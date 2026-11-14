@@ -147,6 +147,12 @@ input[type=range]{width:100%;accent-color:var(--pink)}
 .tl .lane{position:relative;height:42px}
 .tl .seg,.tl .subb{position:absolute;top:0;height:100%;border-radius:6px;overflow:hidden;cursor:pointer;border:2px solid transparent;background:#222 center/cover}
 .tl .seg::after{content:"";position:absolute;left:0;right:0;bottom:0;height:3px;background:var(--tc,rgba(255,255,255,.35))}
+.tl .seg .num{position:absolute;left:3px;top:2px;font-size:10px;font-weight:900;background:rgba(0,0,0,.65);padding:0 4px;border-radius:4px;line-height:14px}
+.tl .seg .fxdot{position:absolute;right:3px;top:3px;width:7px;height:7px;border-radius:50%;background:var(--cyan);box-shadow:0 0 5px var(--cyan)}
+.fxchips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.fxchip{border:1px solid var(--stroke);background:rgba(255,255,255,.06);border-radius:99px;padding:5px 10px;font-size:11.5px;font-weight:600}
+.fxchip.on{background:var(--neon);border-color:transparent;box-shadow:0 0 10px rgba(255,61,174,.5)}
+.helpbox{font-size:11.5px;line-height:1.6;color:rgba(255,255,255,.75);background:rgba(255,255,255,.05);border-radius:12px;padding:10px 12px;margin-top:8px}
 .tl .subb{top:48px;height:26px;font-size:10px;font-weight:700;padding:4px 6px;white-space:nowrap;text-overflow:ellipsis}
 .tl .sel-on{border-color:#fff;box-shadow:0 0 8px var(--pink)}
 .tl .beat{position:absolute;top:8px;width:1px;height:78px;background:rgba(255,255,255,.1)}
@@ -282,7 +288,7 @@ input[type=range]{width:100%;accent-color:var(--pink)}
         <div class="top"><span>💬</span><b>수정 요청</b><label class="switch" style="margin:0;font-size:10.5px"><input type="checkbox" id="autob" checked>바로 반영</label></div>
         <div class="msgs" id="msgs"></div>
         <div class="quick" id="quick"></div>
-        <div class="ask"><textarea id="askin" placeholder="어디를 어떻게 바꿀까요? (Enter로 보내기)"></textarea><button class="send" onclick="sendAsk()">↑</button></div>
+        <div class="ask"><textarea id="askin" placeholder="예) 3번 장면 리버스, 5~7번 흑백 (Enter로 보내기)"></textarea><button class="send" onclick="sendAsk()">↑</button></div>
       </div>
     </section>
 
@@ -428,7 +434,7 @@ function renderReview(){
 function renderTimeline(){
   const p = draft, D = p.duration, pct = t => (t/D*100).toFixed(3)+"%";
   let h = p.beats.map(b => `<div class="beat" style="left:${pct(b)}"></div>`).join("");
-  h += `<div class="lane">` + p.segments.map(s => `<div class="seg ${sel&&sel[0]==="seg"&&sel[1]===s.id?"sel-on":""}" data-seg="${s.id}" style="left:${pct(s.start)};width:calc(${pct(s.end-s.start)} - 2px);--tc:${TC[s.transition]||TC.none}" title="${s.id}번 컷"></div>`).join("") + `</div>`;
+  h += `<div class="lane">` + p.segments.map(s => `<div class="seg ${sel&&sel[0]==="seg"&&sel[1]===s.id?"sel-on":""}" data-seg="${s.id}" style="left:${pct(s.start)};width:calc(${pct(s.end-s.start)} - 2px);--tc:${TC[s.transition]||TC.none}" title="${s.id}번 장면${(s.effects||[]).length ? " · " + s.effects.map(fxName).join(", ") : ""}"><span class="num">${s.id}</span>${(s.effects||[]).length ? '<span class="fxdot"></span>' : ""}</div>`).join("") + `</div>`;
   h += p.subtitles.map(s => `<div class="subb ${sel&&sel[0]==="sub"&&sel[1]===s.id?"sel-on":""}" data-sub="${s.id}" style="left:${pct(s.start)};width:calc(${pct(s.end-s.start)} - 2px);background:${s.accent}aa">${esc(s.text.replace(/\n/g," "))}</div>`).join("");
   h += `<div class="head" id="head"></div>`;
   $("timeline").innerHTML = `<div style="position:relative;height:100%">${h}</div>`;
@@ -450,14 +456,18 @@ function renderInspector(keepFocus){
   if(sel && sel[0] === "seg"){
     const i = p.segments.findIndex(s => s.id === sel[1]), s = p.segments[i];
     const clip = S.clips.find(c => c.path === s.clip) || {duration:1};
-    h = `<div class="hd"><b>✂ ${s.id}번 컷</b><span>${s.start.toFixed(2)} – ${s.end.toFixed(2)}초</span></div>
+    h = `<div class="hd"><b>✂ ${s.id}번 장면</b><span>${s.start.toFixed(2)} – ${s.end.toFixed(2)}초</span></div>
       <label class="f">클립</label><select onchange="setD('segments.${i}.clip', this.value)">${S.clips.map(c => `<option value="${esc(c.path)}" ${c.path===s.clip?"selected":""}>${esc(c.name)}</option>`).join("")}</select>
       ${rng("클립 시작(초)", `segments.${i}.clipIn`, 0, Math.max(clip.duration - (s.end-s.start)*s.speed, 0.01).toFixed(2), 0.05, s.clipIn, v => (+v).toFixed(1))}
       <label class="f">전환</label><select onchange="setD('segments.${i}.transition', this.value)">${opt(ST.transitions, s.transition)}</select>
       ${rng("속도", `segments.${i}.speed`, 0.25, 2, 0.05, s.speed, v => (+v).toFixed(2)+"x")}
       ${rng("천천히 줌인", `segments.${i}.push`, 0, 0.3, 0.01, s.push)}
       <label class="switch"><input type="checkbox" ${s.shake?"checked":""} onchange="setD('segments.${i}.shake', this.checked)">흔들림</label>
-      <button class="ghost" onclick="sel=null;renderInspector();renderTimeline()">선택 해제</button>`;
+      <label class="f">장면 효과 <span class="hint">눌러서 켜고 끄기</span></label>
+      <div class="fxchips">${(ST.sceneFx||[]).map(f => `<button class="fxchip ${(s.effects||[]).includes(f.id)?"on":""}" title="${esc(f.detail)}" onclick="toggleFx(${i}, '${f.id}')">${esc(f.name)}</button>`).join("")}</div>
+      <label class="f">메모 <span class="hint">CapCut에서 직접 할 일을 적어 두면 완성 후 목록으로 알려줘요</span></label>
+      <textarea style="height:50px" placeholder="예) 여기 아웃라인 효과 넣기" onchange="setD('segments.${i}.note', this.value)">${esc(s.note||"")}</textarea>
+      <button class="ghost" style="margin-top:8px" onclick="sel=null;renderInspector();renderTimeline()">선택 해제</button>`;
   } else if(sel && sel[0] === "sub"){
     const i = p.subtitles.findIndex(s => s.id === sel[1]), s = p.subtitles[i];
     if(i < 0){ sel = null; return renderInspector(); }
@@ -473,7 +483,7 @@ function renderInspector(keepFocus){
       ${rng("끝(초)", `subtitles.${i}.end`, 0.2, p.duration, 0.05, s.end, v => (+v).toFixed(2))}
       <div style="display:flex;gap:6px;margin-top:10px"><button class="ghost" onclick="sel=null;renderInspector();renderTimeline()">선택 해제</button><button class="ghost" onclick="draft.subtitles.splice(${i},1);sel=null;renderInspector();renderTimeline()">🗑 삭제</button></div>`;
   } else {
-    h = `<div class="hd"><b>🎚 직접 고치기</b></div><div class="hint" style="font-size:12px">아래 타임라인에서 컷이나 자막을 누르면 여기서 바로 고칠 수 있어요. 말로 부탁하려면 오른쪽 채팅을 쓰세요.</div>
+    h = `<div class="hd"><b>🎚 직접 고치기</b></div><div class="hint" style="font-size:12px">아래 타임라인의 번호가 <b>장면 번호</b>예요. 장면을 누르면 여기서 효과를 켜고 끌 수 있고, 오른쪽 채팅에 "3번 장면 리버스"처럼 써도 돼요.</div>
       <label class="f">CC 프리셋</label><select onchange="setD('cc.preset', this.value)">${opt(ST.ccPresets, p.cc.preset)}</select>
       ${rng("색보정 세기", "cc.intensity", 0, 1, 0.01, p.cc.intensity)}${rng("번짐(글로우)", "cc.bloom", 0, 1, 0.01, p.cc.bloom)}
       ${rng("그레인", "cc.grain", 0, 1, 0.01, p.cc.grain)}${rng("비네팅", "cc.vignette", 0, 1, 0.01, p.cc.vignette)}
@@ -484,6 +494,14 @@ function renderInspector(keepFocus){
   $("insp").innerHTML = `<div class="card">${h}</div>`;
   if(keep >= 0) $("insp").querySelectorAll("input[type=range]")[keep]?.focus();
 }
+const SCENE_FX_CONFLICT = [["velocity_montage","velocity_hero"],["bw","bw_to_color","memory"]];
+function fxName(id){ return (ST.sceneFx||[]).find(f => f.id === id)?.name || id; }
+function toggleFx(i, id){
+  const s = draft.segments[i]; let fx = [...(s.effects||[])];
+  if(fx.includes(id)) fx = fx.filter(x => x !== id);
+  else { SCENE_FX_CONFLICT.forEach(g => { if(g.includes(id)) fx = fx.filter(x => !g.includes(x)); }); fx.push(id); }
+  s.effects = fx; renderInspector(); renderTimeline();
+}
 function addSub(){
   const t = $("video").currentTime || 0, base = draft.subtitles[0] || {style:"neon_glow",font:"BlackHanSans-Regular",size:84,color:"#FFFFFF",accent:"#FF3DAE",x:.5,y:.55};
   draft.subtitles.push({...base, id: Math.max(0, ...draft.subtitles.map(s => s.id)) + 1, text:"새 자막", start:+t.toFixed(2), end:+Math.min(t+1.5, draft.duration).toFixed(2)});
@@ -491,9 +509,15 @@ function addSub(){
 }
 function rebuild(){ const p = JSON.parse(JSON.stringify(draft)); delete p._v; api().rebuild(p); }
 
-const QUICK = ["자막 더 크게","효과 좀 줄여줘","더 몽환적으로 번지게","컷 더 빠르게","색감 더 쨍하게","자막 핑크 네온으로","마지막에 줌 펀치 세게"];
+const QUICK = ["1번 장면 메모리","3번 장면 리버스","마지막 장면 정지 화면","5~7번 흑백","10초에 플래시","2번 장면 벨로시티","4번 흔들림 빼줘","자막 더 크게"];
 function renderChat(){
-  $("msgs").innerHTML = (S.chat.length ? "" : `<div class="bub assistant">영상을 보고 마음에 안 드는 부분을 편하게 말해 주세요.<br><span style="color:var(--dim)">예) "2번째 자막 노란색으로", "처음 3초는 슬로모션", "플래시 다 빼줘"</span></div>`)
+  $("msgs").innerHTML = (S.chat.length ? "" : `<div class="bub assistant">장면 번호(타임라인의 숫자)나 초로 정확히 요청할 수 있어요.<div class="helpbox"><b>바로 반영돼요 (AI 키 없어도 OK)</b><br>
+• "3번 장면 리버스" · "5~7번 흑백" · "10초에 플래시"<br>
+• "마지막 장면 정지 화면" · "1번 장면 메모리"<br>
+• "2번 장면 벨로시티" (느-빠-느) · "2번 히어로" (빠-슬로)<br>
+• "4번 흔들림 빼줘" · "6번 슬로모션" · "3초~6초 흑백에서 컬러로"<br>
+• 효과: 리버스, 정지, 벨로시티, 히어로, 메모리, 흑백, 흑백→컬러, 글리치, 깜빡임, 줌아웃, 줌인, 플래시, 블러, 휩, 흔들림, 슬로모션<br>
+<b>그 밖의 문장</b>은 AI가 처리해요 (설정에서 키 필요)</div></div>`)
     + S.chat.map(m => `<div class="bub ${m.role}">${esc(m.text)}</div>`).join("") + (S.busy && /수정/.test($("stxt").textContent) ? `<div class="bub assistant">고치는 중…</div>` : "");
   $("msgs").scrollTop = 1e9;
   $("quick").innerHTML = QUICK.map(q => `<button class="ghost" ${S.busy?"disabled":""} onclick='ask(${JSON.stringify(q)})'>${q}</button>`).join("");

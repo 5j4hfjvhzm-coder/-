@@ -16,15 +16,24 @@ def _esc(path):
     return path.replace("\\", "/").replace(":", "\\:").replace("'", "\\'")
 
 
-def _seg_filter(i, seg, clip, W, H, fps):
+def _seg_filter(i, seg, W, H, fps):
+    """seg = scenes.expand() 가 만든 조각 하나"""
     length = seg["end"] - seg["start"]
-    speed = 1.0 if clip["isStill"] else seg["speed"]
+    speed = 1.0 if seg["isStill"] else seg["speed"]
+    fx = seg.get("fx") or {}
     f = [f"[{i}:v]setpts=(PTS-STARTPTS)/{speed:.4f}", f"fps={fps}",
          f"scale={W}:{H}:force_original_aspect_ratio=increase", f"crop={W}:{H}", "setsar=1"]
     # 줌: 줌 펀치 / 래디얼 / 천천히 줌인
     push = seg["push"]
     tr = seg["transition"]
-    if tr in ("zoom_punch", "radial_blur") or push > 0:
+    if fx.get("zoom_out"):
+        f.append(f"zoompan=z='1.25-0.25*min(1,(on/{fps})/{length:.3f})':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)'"
+                 f":d=1:s={W}x{H}:fps={fps}")
+    elif fx.get("freeze"):
+        # 멈춘 화면이 밋밋하지 않게 아주 살짝 줌인
+        f.append(f"zoompan=z='1+0.06*(on/{fps})/{length:.3f}':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)'"
+                 f":d=1:s={W}x{H}:fps={fps}")
+    elif tr in ("zoom_punch", "radial_blur") or push > 0:
         k0 = 1.22 if tr == "zoom_punch" else (1.35 if tr == "radial_blur" else 1.0)
         p = min(0.22, length * 0.6) if k0 > 1 else 0
         z = (f"if(lt(on/{fps},{p:.3f}),{k0}-({k0}-1.02)*(on/{fps})/{max(p, 0.001):.3f},"
@@ -38,13 +47,28 @@ def _seg_filter(i, seg, clip, W, H, fps):
     elif tr == "whip":
         f.append(f"gblur=sigma=60:sigmaV=0:enable='lt(t,{t_in:.3f})'")
     if tr == "flash":
-        d = min(0.16, length * 0.5)
+        d = min(0.08, length * 0.5)  # 플래시는 2~3프레임이 가장 깔끔해요
         f.append(f"eq=brightness='if(lt(t,{d:.3f}),0.85*(1-t/{d:.3f}),0)':eval=frame")
     if seg["shake"]:
         e = min(length, 0.5)
         f.append(f"crop=w=iw*0.92:h=ih*0.92:x='(iw-ow)/2+lt(t,{e:.3f})*(1-t/{e:.3f})*iw*0.035*sin(t*90)'"
                  f":y='(ih-oh)/2+lt(t,{e:.3f})*(1-t/{e:.3f})*ih*0.025*cos(t*70)'")
         f.append(f"scale={W}:{H}")
+    # 장면 효과
+    if fx.get("memory"):
+        f.append("colorchannelmixer=.393:.769:.189:0:.349:.686:.168:0:.272:.534:.131")
+        f.append("eq=saturation=0.75:contrast=0.92:brightness=0.04")
+        f.append("gblur=sigma=1.6")
+        f.append(f"fade=t=in:st=0:d={min(0.3, length * 0.5):.3f}:color=white")
+    if fx.get("bw"):
+        f.append("hue=s=0")
+    if fx.get("bwc"):
+        p0, p1 = fx["bwc"]
+        f.append(f"hue=s='clip(({p0:.4f}+({p1 - p0:.4f})*t/{length:.4f}),0,1)'")
+    if fx.get("rgb_split"):
+        f.append(f"format=gbrp,rgbashift=rh=-{max(W // 60, 4)}:bh={max(W // 60, 4)}:enable='lt(t,0.2)'")
+    if fx.get("strobe"):
+        f.append("eq=brightness='if(lt(mod(t,0.2),0.07),0.55,0)':eval=frame")
     f.append(f"trim=duration={length:.4f}")
     f.append("setpts=PTS-STARTPTS,setsar=1,format=yuv420p")
     return ",".join(f) + f"[v{i}]"
@@ -54,8 +78,8 @@ def _hex(c):
     return "0x" + c.lstrip("#")
 
 
-def render(plan, clips, out_path, width=540, progress=lambda m: None):
-    by_path = {c["path"]: c for c in clips}
+def render(plan, pieces, out_path, width=540, progress=lambda m: None):
+    """pieces = scenes.expand(plan, ...)[0]"""
     W = width - width % 2
     H = int(round(plan["height"] * W / plan["width"] / 2)) * 2
     fps = 30
@@ -63,17 +87,14 @@ def render(plan, clips, out_path, width=540, progress=lambda m: None):
     args = ["-hide_banner", "-loglevel", "error", "-y"]
     filters, labels = [], []
     idx = 0
-    for seg in plan["segments"]:
-        c = by_path.get(seg["clip"])
-        if not c:
-            continue
+    for seg in pieces:
         length = seg["end"] - seg["start"]
-        if c["isStill"]:
-            args += ["-loop", "1", "-t", f"{length + 0.1:.3f}", "-i", c["path"]]
+        if seg["isStill"]:
+            args += ["-loop", "1", "-t", f"{length + 0.1:.3f}", "-i", seg["clip"]]
         else:
             need = length * seg["speed"]
-            args += ["-ss", f"{seg['clipIn']:.3f}", "-t", f"{need + 0.1:.3f}", "-i", c["path"]]
-        filters.append(_seg_filter(idx, seg, c, W, H, fps))
+            args += ["-ss", f"{seg['clipIn']:.3f}", "-t", f"{need + 0.1:.3f}", "-i", seg["clip"]]
+        filters.append(_seg_filter(idx, seg, W, H, fps))
         labels.append(f"[v{idx}]")
         idx += 1
     if not labels:
