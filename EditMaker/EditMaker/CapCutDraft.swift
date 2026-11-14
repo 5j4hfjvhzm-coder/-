@@ -432,24 +432,44 @@ enum CapCutDraft {
         let size = (sub.size / canvasWidth * 160 * 10).rounded() / 10
         let strokeWidth: Double = ["impact_pop": 0.12, "cute_bounce": 0.1, "neon_glow": 0.05, "typewriter": 0.03, "light_sweep": 0.03][sub.style] ?? 0
         let glowStyles: Set<String> = ["neon_glow", "soft_blur", "light_sweep", "glitch", "typewriter"]
-        var style: [String: Any] = [
-            "fill": ["alpha": 1.0, "content": ["render_type": "solid", "solid": ["alpha": 1.0, "color": rgb(sub.color)]]],
-            "range": [0, sub.text.utf16.count],
-            "size": size,
-            "bold": false, "italic": false, "underline": false,
-            "strokes": strokeWidth > 0 ? [["content": ["solid": ["alpha": 1.0, "color": rgb(sub.accent)]], "width": strokeWidth]] : [Any](),
-        ]
+        let fillSolid: [String: Any] = ["alpha": 1.0, "color": rgb(sub.color)]
+        let fillContent: [String: Any] = ["render_type": "solid", "solid": fillSolid]
+        let fill: [String: Any] = ["alpha": 1.0, "content": fillContent]
+        var strokes: [[String: Any]] = []
+        if strokeWidth > 0 {
+            let strokeSolid: [String: Any] = ["alpha": 1.0, "color": rgb(sub.accent)]
+            let strokeContent: [String: Any] = ["solid": strokeSolid]
+            strokes.append(["content": strokeContent, "width": strokeWidth])
+        }
+        let range: [Int] = [0, sub.text.utf16.count]
+        var style: [String: Any] = [:]
+        style["fill"] = fill
+        style["range"] = range
+        style["size"] = size
+        style["bold"] = false
+        style["italic"] = false
+        style["underline"] = false
+        style["strokes"] = strokes
         // 받아 둔 한글 폰트 파일을 가리켜요. (CapCut이 무시하면 기본 폰트로 나와요)
         let fontFile = FontInstaller.folder.appendingPathComponent(Catalog.fonts.first { $0.id == sub.font }?.file ?? "")
         if FileManager.default.fileExists(atPath: fontFile.path) {
-            style["font"] = ["id": "", "path": fontFile.path]
+            let font: [String: Any] = ["id": "", "path": fontFile.path]
+            style["font"] = font
         }
         var hasShadow = false
-        if glowStyles.contains(sub.style) {
-            style["shadows"] = [["diffuse": 0.25, "alpha": 0.9, "distance": 0.0, "content": ["solid": ["color": rgb(sub.accent)]], "angle": -45.0]]
-            hasShadow = true
-        } else if sub.style != "minimal" {
-            style["shadows"] = [["diffuse": 0.05, "alpha": 0.6, "distance": 5.0, "content": ["solid": ["color": [0.0, 0.0, 0.0]]], "angle": -45.0]]
+        if sub.style != "minimal" {
+            let glow = glowStyles.contains(sub.style)
+            let shadowColor: [Double] = glow ? rgb(sub.accent) : [0.0, 0.0, 0.0]
+            let shadowSolid: [String: Any] = ["color": shadowColor]
+            let shadowContent: [String: Any] = ["solid": shadowSolid]
+            var shadow: [String: Any] = [:]
+            shadow["diffuse"] = glow ? 0.25 : 0.05
+            shadow["alpha"] = glow ? 0.9 : 0.6
+            shadow["distance"] = glow ? 0.0 : 5.0
+            shadow["content"] = shadowContent
+            shadow["angle"] = -45.0
+            let shadows: [[String: Any]] = [shadow]
+            style["shadows"] = shadows
             hasShadow = true
         }
         let contentObj: [String: Any] = ["styles": [style], "text": sub.text]
@@ -493,7 +513,11 @@ enum CapCutDraft {
              "md5": "", "metetype": m.kind, "roughcut_time_range": ["duration": us(m.dur), "start": 0],
              "sub_time_range": ["duration": -1, "start": -1], "type": 0, "width": Int(m.w)]
         }
-        let buckets: [[String: Any]] = [0, 1, 2, 3, 6, 7, 8].map { t in ["type": t, "value": t == 0 ? entries : []] }
+        let empty: [[String: Any]] = []
+        let buckets: [[String: Any]] = [0, 1, 2, 3, 6, 7, 8].map { (t: Int) -> [String: Any] in
+            let value: [[String: Any]] = t == 0 ? entries : empty
+            return ["type": t, "value": value]
+        }
         return [
             "cloud_package_completed_time": "", "draft_cloud_capcut_purchase_info": "",
             "draft_cloud_last_action_download": false, "draft_cloud_materials": [Any](), "draft_cloud_purchase_info": "",
