@@ -227,7 +227,10 @@ def hud_label(canvas, text, px, py, lx, ly, col, alpha):
     canvas[:] = canvas + (cv2.GaussianBlur(layer, (0, 0), 2) + layer)[..., None] * c * alpha * 0.9
     spr = text_sprite(text, 40, col, F_XBOLD, stroke=4, track=4)
     off = spr.shape[1] / 2 + 8
-    blit(canvas, spr, lx + (off if lx >= px else -off), ly, 1.0, alpha)
+    cx = lx + (off if lx >= px else -off)
+    half = spr.shape[1] / 2 - 30
+    cx = min(max(cx, half + 10), W - half - 10)
+    blit(canvas, spr, cx, ly, 1.0, alpha)
 
 
 # ------------------------------------------------------------ headline + subtitles
@@ -456,15 +459,15 @@ def main():
             px, py = p["cereb"][0] * W, p["cereb"][1] * H
             if shot == "S3b_cereb_close":
                 px, py = W * 0.52, H * 0.60
-            hud_label(img, "CEREBELLUM", px, py, min(px + 150, W - 380) if px < W * 0.6 else px - 160,
-                      py + 210, CYAN, al)
+            lx = min(px + 150, W - 380) if px < W * 0.6 else px - 160
+            hud_label(img, "CEREBELLUM", px, py, lx, min(py + 190, 1230) if py < 1000 else py - 190, CYAN, al)
         if shot == "S3c_predict":
             al = smooth((t - 13.65) / 0.25) * smooth((15.45 - t) / 0.2)
             ax, ay = p["arc"][0] * W, p["arc"][1] * H
             hud_label(img, "PREDICTION", ax, ay, ax + 130, ay + 260, (0, 255, 215), al)
             al2 = smooth((t - 14.55) / 0.2) * smooth((15.45 - t) / 0.2)
             sx, sy = p["spot"][0] * W, p["spot"][1] * H
-            hud_label(img, "MATCH = WEAKER FEEL", sx, sy, max(sx - 120, 120), sy - 150, WHITE, al2)
+            hud_label(img, "MATCH = WEAKER FEEL", sx, sy, min(max(sx - 60, 440), W - 440), max(sy - 170, 560), WHITE, al2)
         if shot == "S2b_nerve":
             al = smooth((t - 5.25) / 0.25) * smooth((6.95 - t) / 0.15)
             spr = text_sprite("SIGNAL  >>  TO THE BRAIN", 40, CYAN, F_XBOLD, stroke=4, track=3)
