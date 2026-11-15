@@ -1,0 +1,4 @@
+build/*.blend
+build/*.wav
+build/scene_proj.json
+__pycache__/
