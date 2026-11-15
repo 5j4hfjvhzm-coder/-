@@ -155,7 +155,11 @@ class Api:
 
     # ---------- 재료 ----------
     def _dialog(self, multiple, types):
-        r = self._window.create_file_dialog(webview.OPEN_DIALOG, allow_multiple=multiple, file_types=types)
+        try:
+            r = self._window.create_file_dialog(webview.OPEN_DIALOG, allow_multiple=multiple, file_types=types)
+        except Exception:
+            # 파일 종류 필터가 문제면 필터 없이라도 창을 열어요
+            r = self._window.create_file_dialog(webview.OPEN_DIALOG, allow_multiple=multiple)
         return list(r) if r else []
 
     def pick_reference(self):
@@ -182,7 +186,7 @@ class Api:
 
     def pick_clips(self):
         exts = ";".join("*" + e for e in sorted(media.VIDEO_EXTS | media.IMAGE_EXTS))
-        self.add_paths(self._dialog(True, (f"영상·사진 ({exts})", "모든 파일 (*.*)")))
+        self.add_paths(self._dialog(True, (f"영상 사진 ({exts})", "모든 파일 (*.*)")))
 
     def pick_music(self):
         exts = ";".join("*" + e for e in sorted(media.AUDIO_EXTS | {".mp4", ".mov"}))
