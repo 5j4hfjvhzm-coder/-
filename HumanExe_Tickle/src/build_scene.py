@@ -188,12 +188,6 @@ def build():
     area_light("B_key", (2, 3, 3), (0, 0, 0), (0.8, 0.9, 1), 25)
     area_light("B_under", (0, 2, -3), (0, 0, 0), (0.1, 0.4, 1), 20)
 
-    dust = tubes.particles("BrainDust", 650, (0, 0, 0), 5.0, size=(0.004, 0.014), seed=3)
-    dust.data.materials.append(M.emissive("DustMat", (0.15, 0.55, 1.0), 6.0))
-    # gentle drift
-    dust.rotation_euler = (0, 0, 0); dust.keyframe_insert("rotation_euler", frame=1)
-    dust.rotation_euler = (0.05, 0.0, 0.5); dust.keyframe_insert("rotation_euler", frame=TOTAL)
-    set_interp(dust, "LINEAR")
 
     # touch signal climbing the brainstem
     spinal = tubes.tube("SpinalFiber", [(0, -0.12, -1.45), (0, -0.12, -1.05),
@@ -224,8 +218,6 @@ def build():
     Ab.data.materials.append(bone_b); Bb.data.materials.append(bone_b); Cb.data.materials.append(bone_m)
 
     area_light("A_top", ARM_O + Vector((0, -1, 4)), ARM_O, (0.4, 0.7, 1), 80, size=4)
-    adust = tubes.particles("ArmDust", 500, ARM_O, 5.0, size=(0.005, 0.015), seed=7)
-    adust.data.materials.append(bpy.data.materials["DustMat"])
 
     # top surface of forearm A (ray cast down on evaluated mesh)
     dg = bpy.context.evaluated_depsgraph_get()
@@ -398,6 +390,24 @@ def build():
         f = f0 + int((f1 + 1 - f0) * i / 6)
         keys.append((f, (4.7 * math.cos(a), 4.7 * math.sin(a), 0.6), (0, 0, -0.85), 40))
     cams["S5_outro"] = make_cam("Cam12", keys, interp="LINEAR")
+
+    # dust clouds, kept clear of every camera path (no out-of-focus blobs)
+    paths = []
+    for name, cam in cams.items():
+        f0, f1 = shot_frames(name)
+        pts = []
+        for f in (f0, (f0 + f1) // 2, f1 + 1):
+            sc.frame_set(f); pts.append(tuple(cam.matrix_world.translation))
+        paths += [(pts[0], pts[1]), (pts[1], pts[2])]
+    sc.frame_set(1)
+    dmat = M.emissive("DustMat", (0.15, 0.55, 1.0), 6.0)
+    dust = tubes.particles("BrainDust", 650, (0, 0, 0), 5.0, size=(0.004, 0.014), seed=3, avoid=paths, clear=1.0)
+    dust.data.materials.append(dmat)
+    dust.rotation_euler = (0, 0, 0); dust.keyframe_insert("rotation_euler", frame=1)
+    dust.rotation_euler = (0.05, 0.0, 0.5); dust.keyframe_insert("rotation_euler", frame=TOTAL)
+    set_interp(dust, "LINEAR")
+    adust = tubes.particles("ArmDust", 500, tuple(ARM_O), 5.0, size=(0.005, 0.015), seed=7, avoid=paths, clear=1.4)
+    adust.data.materials.append(dmat)
 
     for name, cam in cams.items():
         f0, _ = shot_frames(name)

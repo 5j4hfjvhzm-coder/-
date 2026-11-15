@@ -244,13 +244,14 @@ def draw_headline(canvas, t):
             gap = -int(size * 0.93)
             widths = [s.shape[1] for s in sprs]
             total = sum(widths) + gap * (len(sprs) - 1)
-            x = W / 2 - total / 2
+            fit = min(1.0, 930 / max(total - size * 1.2, 1))
+            x = W / 2 - total * fit / 2
             for s, wd in zip(sprs, widths):
                 k = (t - t0 - wi * 0.06) / 0.28
-                sc = 0.35 + 0.65 * ease_out_back(k) if k < 1 else 1.0
+                sc = (0.35 + 0.65 * ease_out_back(k) if k < 1 else 1.0) * fit
                 op = smooth(k * 2.2) * out_k
-                blit(canvas, s, x + wd / 2, y, sc, op)
-                x += wd + gap
+                blit(canvas, s, x + wd * fit / 2, y, sc, op)
+                x += (wd + gap) * fit
                 wi += 1
             y += int(size * 1.08)
 

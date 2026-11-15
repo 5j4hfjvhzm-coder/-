@@ -56,7 +56,7 @@ def tube(name, pts, radius=0.012, taper=(1.0, 1.0), ring=10, n=240):
     return ob
 
 
-def particles(name, count, center, radius, size=(0.004, 0.012), seed=1, flat=None):
+def particles(name, count, center, radius, size=(0.004, 0.012), seed=1, flat=None, avoid=(), clear=1.4):
     rng = np.random.default_rng(seed)
     verts, faces = [], []
     # tiny octahedra
@@ -70,6 +70,8 @@ def particles(name, count, center, radius, size=(0.004, 0.012), seed=1, flat=Non
         if flat is not None:
             p *= np.array(flat)
         p = np.array(center) + p * radius
+        if any(_seg_d(p, a, b) < clear for a, b in avoid):
+            continue
         s = rng.uniform(*size)
         off = len(verts)
         verts += list(p + base * s)
@@ -79,3 +81,10 @@ def particles(name, count, center, radius, size=(0.004, 0.012), seed=1, flat=Non
     ob = bpy.data.objects.new(name, me)
     bpy.context.scene.collection.objects.link(ob)
     return ob
+
+
+def _seg_d(p, a, b):
+    a = np.asarray(a, float); b = np.asarray(b, float)
+    ab = b - a
+    t = np.clip(np.dot(p - a, ab) / max(np.dot(ab, ab), 1e-9), 0, 1)
+    return np.linalg.norm(p - (a + t * ab))
