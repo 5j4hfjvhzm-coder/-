@@ -62,6 +62,6 @@ Alternatives:
 
 - 3D: procedural brain (gyri and sulci, Sylvian fissure, cerebellum with folia, brainstem) and x-ray hologram arms, modeled and rendered in Blender 5.2 (Cycles). No stock footage.
 - Voice: Kokoro-82M TTS (Apache-2.0). Subtitles are synced word by word from the TTS phoneme timestamps.
-- Music and SFX: synthesized from scratch in code (no third-party samples) and ducked under the narration. Mastered to about −14 LUFS.
+- Music and SFX: synthesized from scratch in code (no third-party samples) and ducked under the narration. Mastered to −14.7 LUFS integrated, −1.4 dBTP true peak.
 - Fonts: Inter (OFL), JetBrains Mono (OFL). 🧠 emoji: Noto Emoji (Apache-2.0).
 - Source for every step is in `src/`.
