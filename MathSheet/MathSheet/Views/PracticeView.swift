@@ -4,17 +4,26 @@ import SwiftUI
 struct PracticeView: View {
     @EnvironmentObject var store: Store
     @Binding var selection: Route?
+    @State private var course: Course?
+
+    private var shown: Course { course ?? store.settings.course }
 
     private let columns = [GridItem(.adaptive(minimum: 300), spacing: 16)]
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 12) {
-                Text("원하는 단원을 골라 연습 학습지를 풀어요. 매일 학습지와 따로라서 밀린 학습지에 쌓이지 않아요.")
+                Picker("학년·학기", selection: Binding(get: { shown }, set: { course = $0 })) {
+                    ForEach(Course.allCases) { c in
+                        Text(c.short).tag(c)
+                    }
+                }
+                .pickerStyle(.segmented)
+                Text("\(shown.korean) · 원하는 단원을 골라 연습 학습지를 풀어요. 매일 학습지와 따로라서 밀린 학습지에 쌓이지 않아요.")
                     .font(.callout)
                     .foregroundStyle(.secondary)
                 LazyVGrid(columns: columns, spacing: 16) {
-                    ForEach(MathUnit.allCases) { unit in
+                    ForEach(shown.units) { unit in
                         card(unit)
                     }
                 }

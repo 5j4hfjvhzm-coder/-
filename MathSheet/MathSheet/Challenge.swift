@@ -11,6 +11,7 @@ extension Generator {
         case .decimalMul: p = decimalHard(d)
         case .cuboid: p = cuboidHard(d)
         case .average: p = averageHard(d)
+        default: p = extra(unit, d, hard: true)
         }
         p.hard = true
         return p

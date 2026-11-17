@@ -15,7 +15,7 @@ struct WrongNotesView: View {
                     Text("전체 (\(all.count))").tag(MathUnit?.none)
                     ForEach(MathUnit.allCases) { u in
                         let n = all.filter { $0.problem.unit == u }.count
-                        if n > 0 { Text("\(u.number). \(u.korean) (\(n))").tag(MathUnit?.some(u)) }
+                        if n > 0 { Text("\(u.course.short) \(u.number). \(u.korean) (\(n))").tag(MathUnit?.some(u)) }
                     }
                 }
                 .pickerStyle(.menu)

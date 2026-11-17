@@ -79,7 +79,7 @@ struct ProblemCard: View {
                     .padding(.horizontal, 8).padding(.vertical, 3)
                     .background(Capsule().fill(Color.purple))
             }
-            Text("Unit \(problem.unit.number) · \(problem.unit.english)")
+            Text("\(problem.unit.course.short) · Unit \(problem.unit.number) · \(problem.unit.english)")
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .lineLimit(1)

@@ -9,6 +9,11 @@ struct SettingsView: View {
         NavigationStack {
             Form {
                 Section {
+                    Picker("학년·학기", selection: courseBinding) {
+                        ForEach(Course.allCases) { c in
+                            Text(c.korean).tag(c)
+                        }
+                    }
                     Picker("학습 방식", selection: $store.settings.studyMode) {
                         Text("한 단원씩 반복").tag(StudyMode.chapter)
                         Text("여러 단원 섞기").tag(StudyMode.mixed)
@@ -39,7 +44,7 @@ struct SettingsView: View {
                 } header: {
                     Text("학습 계획")
                 } footer: {
-                    Text("한 단원씩 반복: 고른 단원만 정한 기간(기본 30일) 동안 매일 나와요. 기간이 끝나면 다음 단원으로 넘어가고, 마지막 단원 다음엔 처음 단원으로 돌아가 복습해요. 아래 단원 목록에서 끈 단원은 건너뛰어요.")
+                    Text("학년·학기를 바꾸면 그 학기 첫 단원부터 오늘 새로 시작하고, 아직 안 푼 학습지도 새 학기 문제로 바뀌어요. 한 단원씩 반복: 고른 단원만 정한 기간(기본 30일) 동안 매일 나와요. 기간이 끝나면 다음 단원으로 넘어가고, 마지막 단원 다음엔 처음 단원으로 돌아가 복습해요. 아래 단원 목록에서 끈 단원은 건너뛰어요.")
                 }
 
                 Section {
@@ -52,8 +57,8 @@ struct SettingsView: View {
                     Text("설정을 바꾸면 아직 한 문제도 안 푼 학습지에도 바로 적용돼요. 손가락 쓰기를 끄면 연습장에는 Apple Pencil로만 쓰고, 손가락으로는 화면을 넘길 수 있어요.")
                 }
 
-                Section("단원 (5학년 2학기)") {
-                    ForEach(MathUnit.allCases) { u in
+                Section("단원 (\(store.settings.course.korean))") {
+                    ForEach(store.settings.course.units) { u in
                         Toggle(isOn: unitBinding(u)) {
                             VStack(alignment: .leading, spacing: 2) {
                                 Text("\(u.number). \(u.korean)")
@@ -90,6 +95,14 @@ struct SettingsView: View {
                 Button("모두 지우기", role: .destructive) { store.resetAll() }
             }
         }
+    }
+
+    /// 학년·학기를 고르면 그 학기 첫 단원부터 오늘 새로 시작해요.
+    private var courseBinding: Binding<Course> {
+        Binding(
+            get: { store.settings.course },
+            set: { store.selectCourse($0) }
+        )
     }
 
     /// 단원을 고르면 오늘부터 그 단원 기간이 새로 시작돼요.

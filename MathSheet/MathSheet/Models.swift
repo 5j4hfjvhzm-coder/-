@@ -1,12 +1,69 @@
 import Foundation
 
-/// 5학년 2학기 단원
-enum MathUnit: String, Codable, CaseIterable, Identifiable {
-    case range, fractionMul, symmetry, decimalMul, cuboid, average
+/// 학년·학기 (2015 개정 교육과정 기준)
+enum Course: String, Codable, CaseIterable, Identifiable {
+    case e5b, e6a, e6b, m1, m2, m3
 
     var id: String { rawValue }
 
-    var number: Int { (MathUnit.allCases.firstIndex(of: self) ?? 0) + 1 }
+    var korean: String {
+        switch self {
+        case .e5b: return "초등 5학년 2학기"
+        case .e6a: return "초등 6학년 1학기"
+        case .e6b: return "초등 6학년 2학기"
+        case .m1: return "중학교 1학년"
+        case .m2: return "중학교 2학년"
+        case .m3: return "중학교 3학년"
+        }
+    }
+
+    var short: String {
+        switch self {
+        case .e5b: return "초5-2"
+        case .e6a: return "초6-1"
+        case .e6b: return "초6-2"
+        case .m1: return "중1"
+        case .m2: return "중2"
+        case .m3: return "중3"
+        }
+    }
+
+    var units: [MathUnit] { MathUnit.allCases.filter { $0.course == self } }
+}
+
+/// 단원
+enum MathUnit: String, Codable, CaseIterable, Identifiable {
+    // 초5-2
+    case range, fractionMul, symmetry, decimalMul, cuboid, average
+    // 초6-1
+    case e61Frac, e61Prism, e61Dec, e61Ratio, e61Graph, e61Volume
+    // 초6-2
+    case e62Frac, e62Dec, e62Space, e62Proportion, e62Circle, e62Solids
+    // 중1
+    case m1Prime, m1Integer, m1Expr, m1Equation, m1Coord, m1Geometry, m1Stats
+    // 중2
+    case m2Repeating, m2Expr, m2Inequality, m2System, m2Linear, m2Shapes, m2Similar, m2Probability
+    // 중3
+    case m3Root, m3Factor, m3Quadratic, m3QFunc, m3Trig, m3Circle, m3Stats
+
+    var id: String { rawValue }
+
+    var course: Course {
+        switch self {
+        case .range, .fractionMul, .symmetry, .decimalMul, .cuboid, .average: return .e5b
+        case .e61Frac, .e61Prism, .e61Dec, .e61Ratio, .e61Graph, .e61Volume: return .e6a
+        case .e62Frac, .e62Dec, .e62Space, .e62Proportion, .e62Circle, .e62Solids: return .e6b
+        case .m1Prime, .m1Integer, .m1Expr, .m1Equation, .m1Coord, .m1Geometry, .m1Stats: return .m1
+        case .m2Repeating, .m2Expr, .m2Inequality, .m2System, .m2Linear, .m2Shapes, .m2Similar, .m2Probability: return .m2
+        case .m3Root, .m3Factor, .m3Quadratic, .m3QFunc, .m3Trig, .m3Circle, .m3Stats: return .m3
+        }
+    }
+
+    /// 학기 안에서 몇 단원인지
+    var number: Int { (course.units.firstIndex(of: self) ?? 0) + 1 }
+
+    /// 전체 순서 (정렬용)
+    var order: Int { MathUnit.allCases.firstIndex(of: self) ?? 0 }
 
     var english: String {
         switch self {
@@ -16,6 +73,40 @@ enum MathUnit: String, Codable, CaseIterable, Identifiable {
         case .decimalMul: return "Multiplying Decimals"
         case .cuboid: return "Cuboids & Cubes"
         case .average: return "Average & Possibility"
+        case .e61Frac: return "Dividing Fractions by Whole Numbers"
+        case .e61Prism: return "Prisms & Pyramids"
+        case .e61Dec: return "Dividing Decimals by Whole Numbers"
+        case .e61Ratio: return "Ratios & Rates"
+        case .e61Graph: return "Bar & Pie Graphs"
+        case .e61Volume: return "Volume & Surface Area"
+        case .e62Frac: return "Dividing Fractions"
+        case .e62Dec: return "Dividing Decimals"
+        case .e62Space: return "Space & Solid Figures"
+        case .e62Proportion: return "Proportions"
+        case .e62Circle: return "Area of a Circle"
+        case .e62Solids: return "Cylinders, Cones & Spheres"
+        case .m1Prime: return "Prime Factorization"
+        case .m1Integer: return "Integers & Rational Numbers"
+        case .m1Expr: return "Variables & Expressions"
+        case .m1Equation: return "Linear Equations"
+        case .m1Coord: return "Coordinates & Graphs"
+        case .m1Geometry: return "Basic Figures & Polygons"
+        case .m1Stats: return "Statistics (Representative Values)"
+        case .m2Repeating: return "Repeating Decimals"
+        case .m2Expr: return "Exponents & Polynomials"
+        case .m2Inequality: return "Linear Inequalities"
+        case .m2System: return "Systems of Equations"
+        case .m2Linear: return "Linear Functions"
+        case .m2Shapes: return "Properties of Triangles & Quadrilaterals"
+        case .m2Similar: return "Similarity & Pythagorean Theorem"
+        case .m2Probability: return "Counting & Probability"
+        case .m3Root: return "Square Roots & Real Numbers"
+        case .m3Factor: return "Expanding & Factoring"
+        case .m3Quadratic: return "Quadratic Equations"
+        case .m3QFunc: return "Quadratic Functions"
+        case .m3Trig: return "Trigonometric Ratios"
+        case .m3Circle: return "Properties of Circles"
+        case .m3Stats: return "Statistics (Spread)"
         }
     }
 
@@ -27,6 +118,40 @@ enum MathUnit: String, Codable, CaseIterable, Identifiable {
         case .decimalMul: return "소수의 곱셈"
         case .cuboid: return "직육면체"
         case .average: return "평균과 가능성"
+        case .e61Frac: return "분수의 나눗셈"
+        case .e61Prism: return "각기둥과 각뿔"
+        case .e61Dec: return "소수의 나눗셈"
+        case .e61Ratio: return "비와 비율"
+        case .e61Graph: return "여러 가지 그래프"
+        case .e61Volume: return "직육면체의 부피와 겉넓이"
+        case .e62Frac: return "분수의 나눗셈"
+        case .e62Dec: return "소수의 나눗셈"
+        case .e62Space: return "공간과 입체"
+        case .e62Proportion: return "비례식과 비례배분"
+        case .e62Circle: return "원의 넓이"
+        case .e62Solids: return "원기둥, 원뿔, 구"
+        case .m1Prime: return "소인수분해"
+        case .m1Integer: return "정수와 유리수"
+        case .m1Expr: return "문자와 식"
+        case .m1Equation: return "일차방정식"
+        case .m1Coord: return "좌표평면과 그래프"
+        case .m1Geometry: return "기본 도형과 평면도형"
+        case .m1Stats: return "자료의 정리와 해석"
+        case .m2Repeating: return "유리수와 순환소수"
+        case .m2Expr: return "식의 계산"
+        case .m2Inequality: return "일차부등식"
+        case .m2System: return "연립일차방정식"
+        case .m2Linear: return "일차함수"
+        case .m2Shapes: return "삼각형과 사각형의 성질"
+        case .m2Similar: return "도형의 닮음과 피타고라스 정리"
+        case .m2Probability: return "경우의 수와 확률"
+        case .m3Root: return "제곱근과 실수"
+        case .m3Factor: return "다항식의 곱셈과 인수분해"
+        case .m3Quadratic: return "이차방정식"
+        case .m3QFunc: return "이차함수"
+        case .m3Trig: return "삼각비"
+        case .m3Circle: return "원의 성질"
+        case .m3Stats: return "통계 (산포도)"
         }
     }
 }
@@ -213,7 +338,10 @@ struct Settings: Codable, Equatable {
     /// 한 단원을 공부하는 기간 (일)
     var chapterDays = 30
     var chapterStart: String?
-    var units: [MathUnit] = MathUnit.allCases
+    /// 공부하는 학년·학기
+    var course: Course = .e5b
+    /// 학습지에 나오는 단원 (지금 학년·학기 안에서)
+    var units: [MathUnit] = Course.e5b.units
     var skipWeekends = false
     /// 매일 알림 (기본으로 켜요: 학습지가 매일 온다는 걸 알려줘요)
     var reminderOn = true
@@ -237,6 +365,7 @@ struct Settings: Codable, Equatable {
         chapterUnit = (try? c.decode(MathUnit.self, forKey: .chapterUnit)) ?? base.chapterUnit
         chapterDays = (try? c.decode(Int.self, forKey: .chapterDays)) ?? base.chapterDays
         chapterStart = try? c.decode(String.self, forKey: .chapterStart)
+        course = (try? c.decode(Course.self, forKey: .course)) ?? base.course
         units = (try? c.decode([MathUnit].self, forKey: .units)) ?? base.units
         skipWeekends = (try? c.decode(Bool.self, forKey: .skipWeekends)) ?? base.skipWeekends
         reminderOn = (try? c.decode(Bool.self, forKey: .reminderOn)) ?? base.reminderOn
@@ -248,7 +377,10 @@ struct Settings: Codable, Equatable {
 }
 
 extension Settings {
-    private var order: [MathUnit] { units.isEmpty ? MathUnit.allCases : units }
+    private var order: [MathUnit] {
+        let us = units.filter { $0.course == course }
+        return us.isEmpty ? course.units : us
+    }
 
     /// 그날 공부할 단원 (단원 집중 모드). 기간이 끝나면 다음 단원, 마지막 다음엔 처음 단원으로 돌아가요.
     func unit(on day: String) -> MathUnit {

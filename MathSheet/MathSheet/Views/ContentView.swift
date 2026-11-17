@@ -9,14 +9,8 @@ enum Route: Hashable {
 
 extension MathUnit {
     var color: Color {
-        switch self {
-        case .range: return .blue
-        case .fractionMul: return .orange
-        case .symmetry: return .purple
-        case .decimalMul: return .teal
-        case .cuboid: return .green
-        case .average: return .pink
-        }
+        let palette: [Color] = [.blue, .orange, .purple, .teal, .green, .pink, .indigo, .red]
+        return palette[(number - 1) % palette.count]
     }
 }
 
@@ -141,7 +135,7 @@ struct ContentView: View {
             }
             .padding(.vertical, 4)
         } header: {
-            Text("이번 단원 (반복 학습)")
+            Text("이번 단원 · \(store.settings.course.korean)")
         }
     }
 

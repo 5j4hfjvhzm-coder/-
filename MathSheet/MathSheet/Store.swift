@@ -143,6 +143,17 @@ final class Store: ObservableObject {
         }
     }
 
+    /// 학년·학기를 바꿔요. 그 학기의 모든 단원이 켜지고 첫 단원부터 오늘 새로 시작해요.
+    func selectCourse(_ course: Course) {
+        guard course != settings.course else { return }
+        var s = settings
+        s.course = course
+        s.units = course.units
+        s.chapterUnit = course.units[0]
+        s.chapterStart = Day.today
+        settings = s
+    }
+
     /// 지금 공부하는 단원을 바꾸고, 오늘부터 기간을 새로 세요.
     func startChapter(_ unit: MathUnit) {
         var s = settings

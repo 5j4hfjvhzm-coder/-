@@ -15,7 +15,7 @@ struct HistoryView: View {
                         let total = st.total
                         VStack(alignment: .leading, spacing: 6) {
                             HStack {
-                                Text("\(u.number). \(u.korean)")
+                                Text("\(u.course.short) \(u.number). \(u.korean)")
                                 Spacer()
                                 Text("\(right)/\(total) · \(right * 100 / total)%")
                                     .font(.callout.monospacedDigit())

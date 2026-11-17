@@ -106,6 +106,7 @@ enum Generator {
         case .decimalMul: return decimal(d)
         case .cuboid: return cuboid(d)
         case .average: return average(d)
+        default: return extra(unit, d, hard: false)
         }
     }
 
